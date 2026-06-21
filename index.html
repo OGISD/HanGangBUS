@@ -181,7 +181,7 @@
 /* ===== 배포 설정: 여기만 채우면 방문자 누구나 들어오자마자 자동 작동 ===== */
 var CONFIG = {
   // [방법 A] 한강홍수통제소 인증키를 직접 넣기 — 가장 간단하지만, 페이지 소스보기로 키가 노출됨
-  API_KEY: "",
+  API_KEY: "D9D68BCE-6338-49E8-9BD0-9A83B99DD24E",
   PROXY: "https://api.allorigins.win/raw?url=",   // 브라우저 CORS 우회용 공용 프록시 (불안정할 수 있음)
 
   // [방법 B · 다수 공개용 권장] 본인 프록시(Cloudflare Worker)에 키를 숨기고 그 주소만 입력
@@ -203,7 +203,7 @@ try{ bridges=JSON.parse(store.get('hb_bridges4','')); if(!Array.isArray(bridges)
 if(!bridges) bridges=DEFAULT_BRIDGES.map(function(b){return Object.assign({},b);});
 
 var G={ apiKey: CONFIG.API_KEY || store.get('hb_key',''),
-  useProxy: store.get('hb_proxy','1')==='1',
+  useProxy: store.get('hb_proxy','0')==='1',
   proxyUrl: store.get('hb_proxyurl', CONFIG.PROXY),
   refreshMin:parseFloat(store.get('hb_refresh','10')),
   mode: (CONFIG.ENDPOINT_TEMPLATE||CONFIG.API_KEY) ? 'auto' : store.get('hb_mode','manual') };
