@@ -1,0 +1,2 @@
+# 줄바꿈을 LF로 정규화 (원격은 GitHub 웹 편집으로 CRLF가 섞여 있었음)
+* text=auto eol=lf

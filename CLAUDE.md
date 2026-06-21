@@ -5,7 +5,15 @@
 
 ## 프로젝트 한 줄 요약
 한강 교량(잠수교·행주대교)의 **선박 통과높이**를 실시간 수위로 계산해 보여주는
-단일 파일 모바일 웹앱. 소수 내부 공유용. 정적 호스팅(Netlify/GitHub Pages)으로 배포.
+단일 파일 모바일 웹앱. 소수 내부 공유용.
+
+## 현재 배포 상태 (이미 라이브)
+- **공개 주소**: https://ogisd.github.io/HanGangBUS/
+- **저장소**: https://github.com/OGISD/HanGangBUS (GitHub 계정 OGISD)
+- **호스팅**: GitHub Pages.
+- **로컬 폴더는 git 저장소가 아님.** 수정 반영은 github.com 웹에서 `index.html`을 직접
+  편집(전체 복붙) → Commit 하는 방식으로 해 왔음. (원하면 git 연결로 push 전환 가능)
+- 자동 모드 실시간 작동 검증 완료(2026-06 기준).
 
 ## 핵심 공식
 ```
@@ -13,62 +21,60 @@
 기준높이(base)       = 다리 하단 형하 표고(EL.m) − 수위계 영점표고 gdt(EL.m)
 ```
 - `wl`은 한강홍수통제소(HRFCO) 수위관측소의 실시간 수위(영점 기준 값, 음수 가능).
-- 공식 형태는 모든 다리가 동일. 다리마다 다른 건 base·관측소코드·임계값뿐.
 
 ## 교량별 확정값
 | 항목 | 잠수교 | 행주대교 |
 |---|---|---|
 | 관측소 코드(obscd) | 1018680 | 1019630 |
-| 영점표고 gdt | −0.068 | 0.803 |
-| 형하 표고 | 11.69 EL.m | 14.2 EL.m |
 | 기준높이 base | 11.76 | 13.40 |
-| 운항 금지선 noGo | 7.3 (홍수 기준) | 11.0 (마스트 11m 기준) |
-| 위험 경고선 warn | 7.6 | 13.0 (마스트 11m + 여유 2m) |
+| 운항 금지선 noGo | 7.3 | 11.0 |
+| 위험 경고선 warn | 7.6 | 13.0 |
 | 위험 성격 | 수위 상승(잠김) | 선박 높이(마스트) |
+- 둘 다 verified:true. 근거: 잠수교 base는 회사 시스템 응답(wl 4.35 + pass 7.41 = 11.76)으로 역산 검증,
+  행주대교 base는 형하 14.2 − gdt 0.803 ≈ 13.40. 행주대교는 서해 조석 구간이라 썰물 때 wl 음수 정상.
 
-### 값의 근거
-- 잠수교 base 11.76: 회사 시스템 응답에서 `wl 4.35 + passHeight 7.41 = 11.76`로 역산·검증.
-- 행주대교 base 13.40: `형하 14.2 − gdt 0.803 = 13.397 ≈ 13.40`.
-  - 행주대교는 신곡수중보 하류 **조석 구간** → 썰물 때 wl 음수. 평수위 wl ≈ −0.21(통과높이 ≈ 13.61).
-  - 행주대교 임계값은 홍수가 아니라 **선박 마스트 높이** 기준. 현재 마스트 11m + 안전여유 2m로 설정.
-    관심 선박이 더 낮으면(예: 한강버스) noGo/warn을 그 air draft에 맞춰 낮출 것.
-
-## 데이터 출처 / API
+## 데이터 출처 / 아키텍처 결정 (중요)
 - HRFCO 오픈API: `https://api.hrfco.go.kr/{인증키}/waterlevel/list/10M/{obscd}.json`
-- 응답: `{ content: [ { ymdhm, wl, ... } ] }` → 최신 ymdhm 항목의 wl 사용.
-- 인증키는 hrfco.go.kr 오픈API 사용신청(무료).
+  → 응답 `{ content: [...] }` 중 최신 ymdhm 항목의 wl 사용.
+- **방문자 브라우저가 HRFCO를 직접 호출**한다(프록시 없음). HRFCO가
+  `Access-Control-Allow-Origin: *` 를 주므로 브라우저 직접 호출이 가능 → 프록시 불필요.
+- **❗ 워커/해외 프록시 방식은 폐기.** HRFCO API는 **해외 IP 요청에 응답하지 않음**
+  (Cloudflare Worker·allorigins 모두 12초 타임아웃→522/AbortError, 국내 IP는 정상).
+  → Vercel/Netlify/GitHub Actions 등 무료 serverless는 전부 해외 IP라 동일하게 막힘.
+  → 따라서 "무료 서버로 키 숨기기"는 이 API에선 불가능. 키는 소스에 노출됨.
+- **키 노출 판단**: HRFCO 키는 무료·공개 수위 읽기 전용이라 위험 낮음. 악용되면 hrfco.go.kr에서
+  즉시 재발급. 현재 키가 공개 저장소 index.html(CONFIG.API_KEY)에 그대로 들어 있음.
+- 해외에서 접속하면 자동 호출이 막히므로 **수동 모드(수위 직접 입력)**로 폴백 가능.
 
 ## 파일 구조
-- `index.html` — 웹앱 전체(단일 파일). 상단 `CONFIG` 블록만 채우면 배포됨.
-- `hrfco-proxy-worker.js` — (선택) Cloudflare Worker 프록시. 키 숨김 + CORS 해결 + 60초 캐시.
+- `index.html` — 웹앱 전체(단일 파일). 실제 배포물.
+- `hrfco-proxy-worker.js` — (사용 안 함) 폐기된 Cloudflare Worker. 삭제해도 무방.
 
-## index.html 의 CONFIG (배포 시 여기만 수정)
+## index.html 의 CONFIG
 ```js
 var CONFIG = {
-  API_KEY: "",            // [방법 A] HRFCO 키 직접. 간단하나 소스에 노출됨(소수 내부용은 허용)
-  PROXY: "https://api.allorigins.win/raw?url=",  // 공용 CORS 프록시(불안정 가능)
-  ENDPOINT_TEMPLATE: ""   // [방법 B·권장] 워커 주소 "https://....workers.dev/{obscd}" → API_KEY/PROXY 무시
+  API_KEY: "<HRFCO 키>",   // 직접 호출용. 현재 채워져 있음(공개 노출 감수)
+  PROXY: "...",            // 사용 안 함(프록시 기본 꺼짐: hb_proxy 기본 '0')
+  ENDPOINT_TEMPLATE: ""    // 비움(워커 폐기). 채우면 워커 모드지만 이 API엔 부적합
 };
 ```
-- 키나 ENDPOINT_TEMPLATE가 있으면 페이지는 **자동 모드로 시작**(들어오자마자 수위 호출).
-- 비어 있으면 **수동 모드**(수위 직접 입력)로 동작 — 에러 아님.
-
-## 동작 메모
-- 교량 설정은 `DEFAULT_BRIDGES` 배열. 항목 한 줄 추가하면 카드가 늘어남(확장 쉬움).
+- 교량 설정은 `DEFAULT_BRIDGES` 배열. 항목 추가하면 카드가 늘어남.
 - 설정은 guarded localStorage(키 `hb_*`, 교량은 `hb_bridges4`)에 저장. 막히면 메모리 폴백.
-- 하단 상태 표시는 모든 상태에서 "금지선까지 X.XX m"로 통일(부호: +위, −아래).
-- 미검증 교량(verified:false)은 통과높이 판정 보류, 실측 수위만 표시.
-- 접이식 "도움말 · 초간단 Q&A" 섹션에 용어·기준값 근거 정리됨.
 
-## 배포 (소수 내부 공유)
-1. index.html 의 CONFIG.API_KEY 입력
-2. Netlify Drop(끌어다 놓기) 또는 GitHub Pages 에 index.html 업로드
-3. 생성된 링크 내부 공유 → 휴대폰 브라우저로 열기(다운로드 불필요), "홈 화면에 추가" 가능
-- 순서 팁: 키 없이 먼저 배포 → URL 확보 → 그 URL로 키 신청 → 키 넣어 재배포
+## 설정 패널 잠금 (일반 방문자에게 숨김)
+- 설정 `<details id="setPanel">` 는 **기본 숨김**. 일반 방문자는 통과높이 카드만 봄.
+- 열기: ① 비밀 URL `?admin` 로 접속, 또는 ② 제목(h1) 5회 연속 탭.
+  → 해제되면 `hb_admin='1'` 로 그 기기에 기억됨.
+- 다시 숨기기: 설정 맨 아래 "이 기기에서 설정 숨기기" 링크(`#lockSet`, hb_admin='0').
+- **주의**: 이건 보안이 아니라 캐주얼 숨김. 키·설정값은 소스에 있고 우회 가능.
 
-## 알려진 주의점 / 다음 할 일 후보
-- [ ] 공용 프록시(allorigins) 불안정 시 Worker(방법 B)로 전환
-- [ ] 행주대교 임계값을 실제 관심 선박 air draft에 맞게 재설정
-- [ ] 행주대교 gdt(0.803)는 사용자 제공값 — 응답의 gdt와 한 번 대조 권장
-- [ ] 키를 소스에 노출하기 싫으면 Worker + Private 저장소 사용
-- [ ] 교량 추가 시 CLAUDE.md 표와 도움말 Q&A에도 같은 형식으로 기록
+## 로컬 미리보기(개발용)
+- 정적 파일이라 폴더를 그대로 서빙: `python -m http.server 8137` → http://localhost:8137/
+- `.claude/launch.json` 에 미리보기 설정 있음(preview 도구용).
+- preview 도구는 dev 서버(localhost) 오리진에 묶여 있어 외부 github.io 화면 캡처는 안 됨.
+
+## 다음 할 일 후보
+- [ ] 키 노출이 정 부담되면 **국내 IP 서버/프록시**를 따로 둬야 함(무료 serverless 불가). 난이도↑
+- [ ] 행주대교 임계값(noGo/warn)을 실제 관심 선박 air draft(예: 한강버스)에 맞게 재설정
+- [ ] 로컬 폴더를 git에 연결해 web 복붙 대신 push로 배포 자동화
+- [ ] 교량 추가 시 이 표와 도움말 Q&A에도 같은 형식으로 기록

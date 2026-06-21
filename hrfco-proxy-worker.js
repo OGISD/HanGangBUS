@@ -40,16 +40,25 @@ export default {
     const target =
       `https://api.hrfco.go.kr/${env.HRFCO_KEY}/waterlevel/list/10M/${code}.json`;
 
+    // 진단용: 12초 타임아웃을 두어 무한 대기(522) 대신 명확한 에러를 돌려준다
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 12000);
+    const t0 = Date.now();
     try {
-      // 같은 코드 요청은 60초간 Cloudflare 엣지 캐시 사용 (HRFCO 부하 최소화)
-      const upstream = await fetch(target, { cf: { cacheTtl: 60, cacheEverything: true } });
+      const upstream = await fetch(target, {
+        signal: ctrl.signal,
+        headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" },
+      });
+      clearTimeout(timer);
       const body = await upstream.text();
       return new Response(body, {
         status: upstream.status,
         headers: cors("application/json; charset=utf-8"),
       });
     } catch (e) {
-      return json({ error: "upstream 호출 실패: " + String(e) }, 502);
+      clearTimeout(timer);
+      const ms = Date.now() - t0;
+      return json({ error: "upstream 호출 실패", detail: String(e), name: e && e.name, ms }, 502);
     }
   },
 };
