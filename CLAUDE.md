@@ -10,9 +10,13 @@
 ## 현재 배포 상태 (이미 라이브)
 - **공개 주소**: https://ogisd.github.io/HanGangBUS/
 - **저장소**: https://github.com/OGISD/HanGangBUS (GitHub 계정 OGISD)
-- **호스팅**: GitHub Pages.
-- **로컬 폴더는 git 저장소가 아님.** 수정 반영은 github.com 웹에서 `index.html`을 직접
-  편집(전체 복붙) → Commit 하는 방식으로 해 왔음. (원하면 git 연결로 push 전환 가능)
+- **호스팅**: GitHub Pages (`main` 브랜치).
+- **로컬 폴더가 git 저장소임.** (2026-06-22 연결 완료) `origin` = OGISD/HanGangBUS,
+  `main` 추적. 수정 반영은 `git add -A && git commit && git push` → Pages 자동 재배포.
+  (예전 "웹에서 전체 복붙" 방식은 더 이상 안 씀.)
+  - 인증: Git Credential Manager(system helper `manager`)가 처리. push 시 필요하면 로그인 창이 뜸.
+  - 커밋 신원: user.name=OGISD, user.email=buwake58@naver.com (global).
+  - 줄바꿈은 `.gitattributes`로 LF 정규화. `hangang-bridge-monitor.zip`·`.claude/`는 `.gitignore`.
 - 자동 모드 실시간 작동 검증 완료(2026-06 기준).
 
 ## 핵심 공식
@@ -76,5 +80,5 @@ var CONFIG = {
 ## 다음 할 일 후보
 - [ ] 키 노출이 정 부담되면 **국내 IP 서버/프록시**를 따로 둬야 함(무료 serverless 불가). 난이도↑
 - [ ] 행주대교 임계값(noGo/warn)을 실제 관심 선박 air draft(예: 한강버스)에 맞게 재설정
-- [ ] 로컬 폴더를 git에 연결해 web 복붙 대신 push로 배포 자동화
+- [x] ~~로컬 폴더를 git에 연결해 web 복붙 대신 push로 배포 자동화~~ (2026-06-22 완료)
 - [ ] 교량 추가 시 이 표와 도움말 Q&A에도 같은 형식으로 기록
