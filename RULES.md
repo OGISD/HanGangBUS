@@ -59,6 +59,9 @@
   `docs: 배포 방식 갱신`). 본문은 선택, 한국어.
 - 각 작업 후 갱신해야 하는 문서: `TASKS.md`, `CHANGELOG.md`, `AI_HANDOFF.md`, **`CLAUDE.md`**
   (CLAUDE.md 상단 "작업 규칙" 참고 — 문서 갱신을 같은 커밋/푸시에 포함)
+- **버전 태그 규칙**: CHANGELOG.md에 새 버전(예: 0.4.0)을 확정할 만큼 의미 있는 변경이 쌓이면,
+  그 시점에 `git tag v버전`을 만들고 원하면 GitHub Releases에도 CHANGELOG 내용을 게시한다.
+  (아직 실제 태그·릴리즈는 생성하지 않음 — 다음에 새 버전을 완성했을 때부터 적용)
 
 ---
 
