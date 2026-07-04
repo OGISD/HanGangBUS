@@ -66,6 +66,9 @@
 ## 파일 구조
 - `index.html` — 웹앱 전체(단일 파일). 실제 배포물.
 - `hrfco-proxy-worker.js` — (사용 안 함) 폐기된 Cloudflare Worker. 삭제해도 무방.
+- **AI Development OS 문서** (2026-07-04 적용): `PRD.md`(요구사항) · `TASKS.md`(작업 추적) ·
+  `RULES.md`(작업 규칙·원격 저장소 규칙) · `AI_HANDOFF.md`(세션 인수인계) · `CHANGELOG.md`(변경 이력).
+  새 세션은 AI_HANDOFF.md부터 읽기. 작업 완료 시 이 문서들도 CLAUDE.md와 함께 갱신.
 
 ## index.html 의 CONFIG
 ```js
