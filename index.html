@@ -83,6 +83,18 @@
   .note{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:9px;padding-top:9px;border-top:1px solid var(--line)}
   .note b{color:#ffd9a3}
 
+  /* 팔당댐 방류량 카드 */
+  .dam{display:flex;align-items:center;gap:10px;margin-top:2px}
+  .dcol{flex:1;text-align:center;min-width:0}
+  .dlbl{font-size:11px;color:var(--muted);margin-bottom:4px}
+  .dbig{font-size:25px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .dbig span{font-size:12px;font-weight:600;margin-left:3px;color:var(--muted)}
+  .dwin{font-size:10.5px;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums}
+  .darrow{font-size:18px;color:var(--muted);flex:none}
+  .darrow.up{color:var(--caution)}
+  .darrow.down{color:var(--water1)}
+  .dnote{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:9px;padding-top:9px;border-top:1px solid var(--line)}
+
   .msg{font-size:12.5px;color:var(--muted);background:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;line-height:1.5;display:none}
   .msg.show{display:block}.msg.err{color:#ffc9cb;border-color:rgba(239,77,84,.4)}
 
@@ -125,6 +137,25 @@
   </div>
 
   <div class="msg" id="msg"></div>
+
+  <div class="card" id="damCard">
+    <div class="chead"><span class="nm">팔당댐 방류</span><span class="t" id="damT">—</span></div>
+    <div class="dam">
+      <div class="dcol">
+        <div class="dlbl">4시간 전 방류량</div>
+        <div class="dbig" id="damPast">—<span>㎥/s</span></div>
+        <div class="dwin" id="damPastWin">—</div>
+      </div>
+      <div class="darrow" id="damArrow">→</div>
+      <div class="dcol">
+        <div class="dlbl">현재 방류량</div>
+        <div class="dbig" id="damNow">—<span>㎥/s</span></div>
+        <div class="dwin" id="damNowWin">—</div>
+      </div>
+    </div>
+    <div class="dnote" id="damNote">4시간 전 방류량이 지금 여의도 부근에 도달하는 중입니다.</div>
+  </div>
+
   <div id="cards"></div>
 
   <details id="setPanel" style="display:none">
@@ -225,6 +256,9 @@ function ymdhmAgeMin(s){ if(!s||s.length<12)return null;
 function ageStr(m){ if(m<1)return '방금'; if(m<60)return Math.round(m)+'분 전';
   var h=Math.floor(m/60); return h+'시간 '+Math.round(m-h*60)+'분 전'; }
 var STALE_MIN=30;  // 10분 주기 데이터 기준 3주기 이상 지나면 '오래됨'으로 경고
+// ymdhm끼리의 시간차 계산용(가상 KST epoch). 절대시각이 아니라 뺄셈·비교에만 사용.
+function ymdhmToMs(s){ if(!s||s.length<12)return null;
+  return Date.UTC(+s.slice(0,4),+s.slice(4,6)-1,+s.slice(6,8),+s.slice(8,10),+s.slice(10,12)); }
 function showMsg(t,e){var m=$('msg');m.textContent=t;m.className='msg show'+(e?' err':'');}
 function hideMsg(){$('msg').className='msg';}
 
@@ -325,6 +359,57 @@ function fetchAll(){
   if(!CONFIG.ENDPOINT_TEMPLATE && !G.apiKey){ showMsg('자동 모드는 인증키가 필요합니다. 설정에서 넣어 주세요. 그 전까지는 수동 입력으로 쓸 수 있습니다.'); return; }
   hideMsg();
   bridges.forEach(function(b){ if(b.obscd) fetchBridge(b); });
+  fetchDam();
+}
+
+/* ----- 팔당댐 방류량 (HRFCO 댐 API, 수위와 같은 키 사용) ----- */
+var DAM={code:"1017310", lagMin:240, winMin:30};  // 팔당→여의도 도달 약 4시간, 표시창 30분(3회분)
+function damUrl(){
+  // 기간 조회 시각은 반드시 10분 정각으로 — 어긋나면 API가 빈 행만 돌려줌
+  var now=new Date(Date.now()+9*3600000);  // KST로 밀어둔 가상 UTC
+  now.setUTCMinutes(Math.floor(now.getUTCMinutes()/10)*10,0,0);
+  var f=function(d){var p=function(n){return(n<10?'0':'')+n;};
+    return ''+d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+p(d.getUTCHours())+p(d.getUTCMinutes());};
+  var sdt=new Date(now.getTime()-(DAM.lagMin+DAM.winMin+10)*60000);
+  var t='https://api.hrfco.go.kr/'+encodeURIComponent(G.apiKey)+'/dam/list/10M/'+DAM.code+'/'+f(sdt)+'/'+f(now)+'.json';
+  return G.useProxy ? G.proxyUrl+encodeURIComponent(t) : t;
+}
+function fetchDam(){
+  if(!G.apiKey) return;
+  fetch(damUrl(),{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})
+   .then(function(t){var j;try{j=JSON.parse(t);}catch(e){throw new Error('형식 오류');}
+     var a=(j&&j.content)?j.content:[], rows=[];
+     for(var i=0;i<a.length;i++){var v=parseFloat(a[i].tototf); if(!isNaN(v)) rows.push({ymdhm:a[i].ymdhm,v:v});}
+     if(!rows.length) throw new Error('값 없음');
+     rows.sort(function(x,y){return x.ymdhm<y.ymdhm?1:-1;});  // 최신순
+     var nowWin=rows.slice(0,3);
+     // "4시간 전" 창은 벽시계가 아니라 최신 관측시각 기준 240분 전 — 두 창의 간격이 정확히 4시간이 됨
+     var cutMs=ymdhmToMs(rows[0].ymdhm)-DAM.lagMin*60000, past=[];
+     for(i=0;i<rows.length;i++){ if(ymdhmToMs(rows[i].ymdhm)<=cutMs){ past=rows.slice(i,i+3); break; } }
+     renderDam(nowWin, past);})
+   .catch(function(e){ var el=$('damT'); if(el){el.className='t'; el.textContent='호출 실패';}
+     showMsg('팔당댐 방류량 호출 실패: '+e.message+'. 새로고침으로 재시도할 수 있습니다.', true); });
+}
+function renderDam(nowWin, pastWin){
+  var avg=function(w){var s=0;for(var i=0;i<w.length;i++)s+=w[i].v;return w.length?s/w.length:NaN;};
+  var winStr=function(w){return w.length?(ymdhmToStr(w[w.length-1].ymdhm)+'~'+ymdhmToStr(w[0].ymdhm)):'—';};
+  var nv=avg(nowWin), pv=avg(pastWin);
+  $('damNow').innerHTML=fmt(nv,1)+'<span>㎥/s</span>';
+  $('damNowWin').textContent=winStr(nowWin);
+  $('damPast').innerHTML=(pastWin.length?fmt(pv,1):'—')+'<span>㎥/s</span>';
+  $('damPastWin').textContent=winStr(pastWin);
+  var ar=$('damArrow');  // ±2% 이내 변화는 사실상 동일로 보고 화살표 유지
+  if(!pastWin.length||isNaN(nv)||isNaN(pv)){ar.textContent='→';ar.className='darrow';}
+  else if(nv>pv*1.02){ar.textContent='▲';ar.className='darrow up';}
+  else if(nv<pv*0.98){ar.textContent='▼';ar.className='darrow down';}
+  else{ar.textContent='→';ar.className='darrow';}
+  var tEl=$('damT'), latest=nowWin[0]?nowWin[0].ymdhm:null;
+  if(latest){
+    var label='갱신 '+ymdhmToStr(latest), age=ymdhmAgeMin(latest);
+    if(age!=null){ label+=' · '+ageStr(age);
+      if(age>=STALE_MIN){ tEl.className='t stale'; label+=' ⚠'; } else tEl.className='t'; }
+    tEl.textContent=label;
+  }
 }
 
 /* ----- 모드 ----- */
@@ -333,6 +418,10 @@ function applyModeUI(){
   $('mManual').className=G.mode==='manual'?'on':'';
   document.querySelectorAll('[data-r=minput]').forEach(function(el){
     el.className='minput'+(G.mode==='manual'?' show':'');});
+  var dn=$('damNote');
+  if(dn) dn.textContent = G.mode==='manual'
+    ? '방류량은 자동 모드에서만 조회됩니다. 위의 "자동"으로 전환하면 표시됩니다.'
+    : '4시간 전 방류량이 지금 여의도 부근에 도달하는 중입니다.';
 }
 function setMode(m){G.mode=m;store.set('hb_mode',m);applyModeUI();setupTimer();if(m==='auto')fetchAll();}
 
