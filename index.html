@@ -86,10 +86,15 @@
   /* 팔당댐 방류량 카드 */
   .dam{display:flex;align-items:center;gap:10px;margin-top:2px}
   .dcol{flex:1;text-align:center;min-width:0}
-  .dlbl{font-size:11px;color:var(--muted);margin-bottom:4px}
-  .dbig{font-size:25px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-  .dbig span{font-size:12px;font-weight:600;margin-left:3px;color:var(--muted)}
-  .dwin{font-size:10.5px;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums}
+  .dlbl{font-size:11px;color:var(--muted);margin-bottom:5px;text-align:center}
+  .dlbl .du{font-size:10px}
+  .drows{display:flex;flex-direction:column;gap:1px}
+  .drow{display:flex;justify-content:space-between;align-items:baseline;
+    font-variant-numeric:tabular-nums;padding:2.5px 8px;border-radius:6px}
+  .drow .tm{color:var(--muted);font-size:11px}
+  .drow .v{font-size:14px;font-weight:700}
+  .drow.latest{background:rgba(255,255,255,.06)}
+  .drow.latest .v{font-size:15px}
   .darrow{font-size:18px;color:var(--muted);flex:none}
   .darrow.up{color:var(--caution)}
   .darrow.down{color:var(--water1)}
@@ -142,15 +147,13 @@
     <div class="chead"><span class="nm">팔당댐 방류</span><span class="t" id="damT">—</span></div>
     <div class="dam">
       <div class="dcol">
-        <div class="dlbl">4시간 전 방류량</div>
-        <div class="dbig" id="damPast">—<span>㎥/s</span></div>
-        <div class="dwin" id="damPastWin">—</div>
+        <div class="dlbl">4시간 전 방류량 <span class="du">(㎥/s)</span></div>
+        <div class="drows" id="damPastRows"><div class="drow"><span class="tm">—</span><span class="v">—</span></div></div>
       </div>
       <div class="darrow" id="damArrow">→</div>
       <div class="dcol">
-        <div class="dlbl">현재 방류량</div>
-        <div class="dbig" id="damNow">—<span>㎥/s</span></div>
-        <div class="dwin" id="damNowWin">—</div>
+        <div class="dlbl">현재 방류량 <span class="du">(㎥/s)</span></div>
+        <div class="drows" id="damNowRows"><div class="drow"><span class="tm">—</span><span class="v">—</span></div></div>
       </div>
     </div>
     <div class="dnote" id="damNote">4시간 전 방류량이 지금 여의도 부근에 도달하는 중입니다.</div>
@@ -392,12 +395,16 @@ function fetchDam(){
 }
 function renderDam(nowWin, pastWin){
   var avg=function(w){var s=0;for(var i=0;i<w.length;i++)s+=w[i].v;return w.length?s/w.length:NaN;};
-  var winStr=function(w){return w.length?(ymdhmToStr(w[w.length-1].ymdhm)+'~'+ymdhmToStr(w[0].ymdhm)):'—';};
-  var nv=avg(nowWin), pv=avg(pastWin);
-  $('damNow').innerHTML=fmt(nv,1)+'<span>㎥/s</span>';
-  $('damNowWin').textContent=winStr(nowWin);
-  $('damPast').innerHTML=(pastWin.length?fmt(pv,1):'—')+'<span>㎥/s</span>';
-  $('damPastWin').textContent=winStr(pastWin);
+  var rowsHtml=function(w){
+    if(!w.length) return '<div class="drow"><span class="tm">—</span><span class="v">—</span></div>';
+    var a=w.slice().reverse(), h='';  // 과거→최신 순으로, 맨 아래(최신)를 강조
+    for(var i=0;i<a.length;i++)
+      h+='<div class="drow'+(i===a.length-1?' latest':'')+'"><span class="tm">'+ymdhmToStr(a[i].ymdhm)+'</span><span class="v">'+fmt(a[i].v,1)+'</span></div>';
+    return h;
+  };
+  $('damPastRows').innerHTML=rowsHtml(pastWin);
+  $('damNowRows').innerHTML=rowsHtml(nowWin);
+  var nv=avg(nowWin), pv=avg(pastWin);  // 화살표 판정용(30분 평균끼리 비교)
   var ar=$('damArrow');  // ±2% 이내 변화는 사실상 동일로 보고 화살표 유지
   if(!pastWin.length||isNaN(nv)||isNaN(pv)){ar.textContent='→';ar.className='darrow';}
   else if(nv>pv*1.02){ar.textContent='▲';ar.className='darrow up';}
