@@ -29,6 +29,9 @@
   .disc{font-size:11.5px;line-height:1.5;color:#ffd9a3;background:rgba(245,177,61,.10);
     border:1px solid rgba(245,177,61,.28);border-radius:10px;padding:9px 11px;margin:0 0 12px}
   .disc b{color:#ffe7c2}
+  .expwarn{font-size:11.5px;line-height:1.55;color:#ffe0b0;background:rgba(245,177,61,.14);
+    border:1px solid rgba(245,177,61,.4);border-radius:10px;padding:9px 11px;margin:0 0 12px;display:none}
+  .expwarn.on{display:block} .expwarn b{color:#fff}
 
   /* 상단 컨트롤 */
   .bar{display:flex;gap:8px;margin-bottom:12px}
@@ -147,6 +150,7 @@
   <h1>한강 교량 통과높이</h1>
   <p class="lede">통과높이 = 기준높이 − 현재 수위 · 출처 한강홍수통제소</p>
   <p class="disc">⚠ <b>참고용 정보입니다.</b> 실제 운항·통항 여부는 한강홍수통제소 등 공식 정보로 반드시 직접 확인하세요. 수위 데이터는 지연·중단될 수 있습니다.</p>
+  <div class="expwarn" id="expWarn"></div>
 
   <div class="bar">
     <button class="btn primary" id="refresh">새로고침</button>
@@ -261,6 +265,14 @@ var CONFIG = {
   TIDE_KEY: "fd9c1ad3f2f974ca1662b8e4a33403269603cc4c74a8c4f74371b8c781f714b4"
 };
 
+/* ===== API 키 유효기간 — 만료 전 배너로 미리 알림(data.go.kr는 2년, 연장 신청 필요) =====
+   연장하면 아래 date만 새 만료일로 바꾸면 됨. */
+var API_EXPIRY=[
+  { name:"물때(조석예보)",        date:"2028-07-05" },
+  { name:"출몰시각(일출·월출 등)", date:"2028-07-06" }
+];
+var EXPIRY_WARN_DAYS=60;  // 만료 N일 전부터 경고 배너 표시
+
 var mem={};
 var store={get:function(k,d){try{var v=localStorage.getItem(k);return v===null?d:v;}catch(e){return (k in mem)?mem[k]:d;}},
   set:function(k,v){try{localStorage.setItem(k,v);}catch(e){mem[k]=v;}}};
@@ -296,6 +308,20 @@ function ymdhmToMs(s){ if(!s||s.length<12)return null;
   return Date.UTC(+s.slice(0,4),+s.slice(4,6)-1,+s.slice(6,8),+s.slice(8,10),+s.slice(10,12)); }
 function showMsg(t,e){var m=$('msg');m.textContent=t;m.className='msg show'+(e?' err':'');}
 function hideMsg(){$('msg').className='msg';}
+// API 키 만료 임박/만료 시 상단 배너로 알림 — 조용히 데이터가 끊기는 것 방지
+function checkKeyExpiry(){
+  var el=$('expWarn'); if(!el) return;
+  var d=new Date(Date.now()+9*3600000), p=function(n){return(n<10?'0':'')+n;};
+  var today=new Date(d.getUTCFullYear()+'-'+p(d.getUTCMonth()+1)+'-'+p(d.getUTCDate())+'T00:00:00Z');
+  var msgs=[];
+  API_EXPIRY.forEach(function(k){
+    var days=Math.round((new Date(k.date+'T00:00:00Z')-today)/86400000);
+    if(days<0) msgs.push('<b>'+k.name+'</b> API 키가 <b>만료됨</b> ('+k.date+') — 즉시 연장하세요');
+    else if(days<=EXPIRY_WARN_DAYS) msgs.push('<b>'+k.name+'</b> API 키가 <b>'+days+'일 뒤</b> 만료 ('+k.date+') — 미리 연장하세요');
+  });
+  if(msgs.length){ el.innerHTML='🔑 데이터 연결 키 만료 예정 (data.go.kr 활용신청 연장 필요)<br>'+msgs.join('<br>'); el.className='expwarn on'; }
+  else el.className='expwarn';
+}
 
 /* ----- 카드 DOM 생성 ----- */
 function buildCards(){
@@ -619,6 +645,7 @@ buildCards();
 loadSettingsUI();
 applyModeUI();
 applyAdmin();
+checkKeyExpiry();
 if(G.mode==='auto')fetchAll(); else fetchTide();  // 물때는 예보값이라 수동 모드에서도 표시
 setupTimer();
 </script>
