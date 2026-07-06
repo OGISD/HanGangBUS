@@ -37,6 +37,11 @@
   .rowtoggle{text-align:right;margin:-4px 0 12px}
   .minilink{color:var(--muted);font-size:11.5px;text-decoration:underline;cursor:pointer}
   body.noscene .scene{display:none}
+  .cpass{display:none}
+  body.noscene .cpass{display:flex;align-items:baseline;gap:8px;margin:2px 2px 9px}
+  .cpass .n{font-size:30px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1}
+  .cpass .n span{font-size:14px;font-weight:600;margin-left:2px;color:var(--muted)}
+  .cpass .l{font-size:12px;color:var(--muted)}
 
   /* 상단 컨트롤 */
   .bar{display:flex;gap:8px;margin-bottom:12px}
@@ -380,6 +385,7 @@ function buildCards(){
           '<div class="big" data-r="big">—<span>m</span></div><div class="cap" data-r="cap">다리 밑 여유</div>'+
         '</div>'+
       '</div>'+
+      '<div class="cpass" data-r="cpass"></div>'+
       '<div class="crow"><span class="dot bg-safe" data-r="dot"></span>'+
         '<span class="st-lbl s-safe" data-r="lbl">—</span>'+
         '<span class="st-sub" data-r="sub"></span></div>'+
@@ -420,6 +426,7 @@ function renderBridge(b, wl, when, ymdhm){
   if(!b.verified){
     q('big').innerHTML=fmt(wl,2)+'<span>m</span>';
     q('cap').textContent='현재 수위 (실측)';
+    q('cpass').innerHTML='<span class="n">'+q('big').innerHTML+'</span><span class="l">'+q('cap').textContent+'</span>';
     q('dot').className='dot'; q('dot').style.background='#62748a';
     q('lbl').className='st-lbl'; q('lbl').style.color='#9fb2c4'; q('lbl').textContent='기준높이 미설정';
     q('sub').textContent='통과높이 계산 보류 · 설정에서 기준높이 입력 필요';
@@ -429,6 +436,7 @@ function renderBridge(b, wl, when, ymdhm){
   q('cap').textContent='다리 밑 여유';
   q('dot').style.background=''; q('lbl').style.color='';
   q('big').innerHTML=(pass<=0?'침수':fmt(pass,2))+'<span>m</span>';
+  q('cpass').innerHTML='<span class="n">'+q('big').innerHTML+'</span><span class="l">'+q('cap').textContent+'</span>';  // 그림 숨김 시 표시
   var lbl,scls,bcls;
   if(pass<b.noGo){lbl='운항 금지';scls='s-danger';bcls='bg-danger';}
   else if(pass<b.warn){lbl='운항 경고';scls='s-caution';bcls='bg-caution';}  // warn<=noGo면 이 단계 안 뜸
