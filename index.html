@@ -106,11 +106,14 @@
   .trows{display:flex;flex-direction:column;gap:2px}
   .trow{display:flex;align-items:baseline;gap:9px;padding:5px 9px;border-radius:8px;font-variant-numeric:tabular-nums}
   .trow.hi{background:rgba(36,128,184,.13)}
-  .trow .tt{font-size:15px;font-weight:700;min-width:74px}
+  .trow .tt{font-size:15px;font-weight:700;min-width:58px}
+  .trow .nd{font-size:10px;color:var(--muted);font-weight:600;margin-left:3px}
   .trow .tg{font-size:11px;font-weight:700}
-  .trow .tg.hi{color:var(--water1)} .trow .tg.lo{color:var(--muted)}
+  .trow .tg.hi{color:var(--caution)} .trow .tg.lo{color:var(--water1)}
   .trow .tv{margin-left:auto;font-size:13px;color:var(--muted)}
   .trow .tv b{color:var(--text);font-weight:700;font-size:14px}
+  .trow .dl{min-width:50px;text-align:right;font-weight:700;font-size:12.5px;font-variant-numeric:tabular-nums}
+  .trow .dl.up{color:var(--caution)} .trow .dl.down{color:var(--water1)}
 
   .msg{font-size:12.5px;color:var(--muted);background:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;line-height:1.5;display:none}
   .msg.show{display:block}.msg.err{color:#ffc9cb;border-color:rgba(239,77,84,.4)}
@@ -176,7 +179,7 @@
   <div id="cards"><!-- 교량 카드가 여기 삽입됨. 순서: 잠수교 → (여의도 물때) → 행주대교 → (인천 물때) -->
     <div class="card tidecard" id="yeouidoCard">
       <div class="chead"><span class="nm">여의도 물때</span><span class="t" id="yeouidoT">—</span></div>
-      <div class="tnote">인천 만조 시각 +4시간 = 여의도 만조 (오늘)</div>
+      <div class="tnote">인천 물때 시각 +4시간 = 여의도 물때 (오늘) · 단위 cm</div>
       <div class="trows" id="yeouidoRows"><div class="trow"><span class="tv">—</span></div></div>
     </div>
     <div class="card tidecard" id="incheonCard">
@@ -491,22 +494,37 @@ function addMin(hm, add){ // "HH:MM" + add분 → {hm, nextDay}
   if(tot>=1440){tot-=1440;nd=true;}
   return {hm:p(Math.floor(tot/60))+':'+p(tot%60), nextDay:nd};
 }
+function ymdMinus1(ymd){ // "2026-07-06" → "2026-07-05"
+  var d=new Date(ymd+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()-1);
+  var p=function(n){return(n<10?'0':'')+n;};
+  return d.getUTCFullYear()+'-'+p(d.getUTCMonth()+1)+'-'+p(d.getUTCDate()); }
+// 어제 마지막 물때 조위를 캐시 → 오늘 첫 물때의 증감 계산에 사용(이 API는 어제 데이터를 안 줌)
+function loadTideCache(){ try{ return JSON.parse(store.get('hb_tidelast',''))||{}; }catch(e){ return {}; } }
+// 한 물때 행 HTML — e:{val,high,delta}, hm:표시시각, nextDay:익일 여부
+function tideRow(hm, e, nextDay){
+  var arrow=e.high?'▲':'▼', dcls=e.high?'up':'down';
+  var dl='<span class="dl '+dcls+'">'+arrow+(e.delta==null?'':' '+Math.abs(e.delta))+'</span>';
+  return '<div class="trow'+(e.high?' hi':'')+'">'+
+    '<span class="tt">'+hm+(nextDay?'<span class="nd">익일</span>':'')+'</span>'+
+    '<span class="tg '+(e.high?'hi':'lo')+'">'+(e.high?'만조':'간조')+'</span>'+
+    '<span class="tv"><b>'+fmt(e.val,0)+'</b> cm</span>'+dl+'</div>'; }
 function renderTide(list){
   var sorted=list.slice().sort(function(a,b){return a.hm<b.hm?-1:1;});
-  var row=function(hm,high,label,val){
-    return '<div class="trow'+(high?' hi':'')+'"><span class="tt">'+hm+'</span>'+
-      '<span class="tg '+(high?'hi':'lo')+'">'+label+'</span>'+
-      '<span class="tv"><b>'+fmt(val,0)+'</b> cm</span></div>'; };
-  // 인천: 만조·간조 전부
-  var ih=''; sorted.forEach(function(e){ ih+=row(e.hm, e.high, e.high?'만조':'간조', e.val); });
-  $('incheonRows').innerHTML=ih;
-  // 여의도: 만조만 +4시간
-  var yh=''; sorted.filter(function(e){return e.high;}).forEach(function(e){
-    var r=addMin(e.hm, TIDE.lagMin);
-    yh+=row(r.hm, true, '만조'+(r.nextDay?' (익일)':''), e.val); });
-  $('yeouidoRows').innerHTML=yh || '<div class="trow"><span class="tv">오늘 만조 정보 없음</span></div>';
-  // 날짜 라벨(응답의 예보일 = 서버 오늘)
-  var ymd=sorted[0].ymd, dstr=ymd?(ymd.slice(5,7)+'/'+ymd.slice(8,10)+' 예보'):'';
+  var ymd=sorted[0].ymd, cache=loadTideCache();
+  var anchor=cache[ymdMinus1(ymd)];  // 어제 마지막 물때 조위(없으면 undefined)
+  // 증감 = 현재 − 직전 물때 (첫 행은 어제 캐시 사용, 없으면 null)
+  sorted.forEach(function(e,i){
+    var prev = i===0 ? anchor : sorted[i-1].val;
+    e.delta = (prev==null||isNaN(prev)) ? null : Math.round(e.val-prev);
+  });
+  // 오늘 마지막 물때를 캐시에 저장(오늘+어제만 유지) → 내일 첫 행 증감용
+  var nc={}; nc[ymd]=sorted[sorted.length-1].val;
+  var y=ymdMinus1(ymd); if(cache[y]!=null) nc[y]=cache[y];
+  store.set('hb_tidelast',JSON.stringify(nc));
+  // 인천: 물때 전부 / 여의도: 물때 전부 +4시간
+  $('incheonRows').innerHTML=sorted.map(function(e){ return tideRow(e.hm, e, false); }).join('');
+  $('yeouidoRows').innerHTML=sorted.map(function(e){ var r=addMin(e.hm,TIDE.lagMin); return tideRow(r.hm, e, r.nextDay); }).join('');
+  var dstr=ymd?(ymd.slice(5,7)+'/'+ymd.slice(8,10)+' 예보'):'';
   if($('incheonT'))$('incheonT').textContent=dstr;
   if($('yeouidoT'))$('yeouidoT').textContent=dstr;
 }
