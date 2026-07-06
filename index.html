@@ -32,10 +32,11 @@
   .expwarn{font-size:11.5px;line-height:1.55;color:#ffe0b0;background:rgba(245,177,61,.14);
     border:1px solid rgba(245,177,61,.4);border-radius:10px;padding:9px 11px;margin:0 0 12px;display:none}
   .expwarn.on{display:block} .expwarn b{color:#fff}
-  .by{font-size:12px;font-weight:700;color:#9db4c8;margin:1px 0 6px}
+  .head{display:flex;align-items:baseline;gap:8px;margin:2px 0 8px}
+  .head h1{margin:0;flex:1;min-width:0}
+  .by{font-size:11px;font-weight:600;color:#9db4c8;white-space:nowrap}
   .by span{color:var(--muted);font-weight:500}
-  .rowtoggle{text-align:right;margin:-4px 0 12px}
-  .minilink{color:var(--muted);font-size:11.5px;text-decoration:underline;cursor:pointer}
+  .minilink{color:var(--muted);font-size:11.5px;text-decoration:underline;cursor:pointer;flex:none;white-space:nowrap}
   body.noscene .scene{display:none}
   .cpass{display:none}
   body.noscene .cpass{display:flex;align-items:baseline;justify-content:center;gap:8px;margin:2px 2px 9px}
@@ -61,7 +62,7 @@
   .chead .t{margin-left:auto;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums;text-align:right;line-height:1.3}
   .chead .t.stale{color:var(--danger);font-weight:700}
 
-  .scene{position:relative;height:150px;border-radius:13px;overflow:hidden;
+  .scene{position:relative;height:120px;border-radius:13px;overflow:hidden;
     background:linear-gradient(#0a2236,#0c2b42 55%);border:1px solid var(--line)}
   .deck{position:absolute;left:0;right:0;top:26px;height:18px;z-index:4;
     background:linear-gradient(var(--concrete),var(--concrete-d));
@@ -75,7 +76,7 @@
   .water::before{content:"";position:absolute;top:-6px;left:0;right:0;height:12px;
     background:radial-gradient(circle at 10px -3px,var(--water1) 6px,transparent 7px) repeat-x;background-size:20px 12px;opacity:.85}
   .readout{position:absolute;left:0;right:0;z-index:6;text-align:center;transform:translateY(-50%);transition:top 1s cubic-bezier(.3,.7,.2,1)}
-  .readout .big{font-size:38px;font-weight:800;line-height:.9;letter-spacing:-.02em;font-variant-numeric:tabular-nums;text-shadow:0 2px 12px rgba(0,0,0,.5)}
+  .readout .big{font-size:30px;font-weight:800;line-height:.9;letter-spacing:-.02em;font-variant-numeric:tabular-nums;text-shadow:0 2px 12px rgba(0,0,0,.5)}
   .readout .big span{font-size:16px;font-weight:600;margin-left:2px}
   .readout .cap{font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.03em}
 
@@ -130,8 +131,8 @@
   .tcur{margin-top:9px;padding-top:9px;border-top:1px solid var(--line);
     display:flex;align-items:center;gap:9px;font-size:12px;color:var(--muted);padding-left:9px;padding-right:9px}
   .tcur .lbl{font-weight:700;flex:none}
-  .tcur .bar{flex:1;height:9px;border-radius:5px;background:rgba(255,255,255,.1);overflow:hidden}
-  .tcur .fill{display:block;height:100%;border-radius:5px;width:0;
+  .tcur .bar{flex:1;height:12px;border-radius:6px;background:rgba(255,255,255,.1);overflow:hidden;position:relative;top:5px}
+  .tcur .fill{display:block;height:100%;border-radius:6px;width:0;
     background:linear-gradient(90deg,var(--water1),var(--caution));transition:width .8s cubic-bezier(.3,.7,.2,1)}
   .tcur .pct{font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;min-width:40px;text-align:right;flex:none}
 
@@ -143,8 +144,8 @@
   summary::-webkit-details-marker{display:none}
   summary::after{content:"설정 ▾";float:right}
   details[open] summary::after{content:"닫기 ▴"}
-  .help summary::after{content:"도움말 ▾"}
-  .help[open] summary::after{content:"닫기 ▴"}
+  .help summary::after{content:"▾"}
+  .help[open] summary::after{content:"▴"}
   .qa{padding:0 14px 14px}
   .qa .q{font-size:13px;font-weight:700;color:#cfe0ef;margin:15px 0 4px}
   .qa .a{font-size:12.5px;color:var(--muted);line-height:1.6}
@@ -164,8 +165,10 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>한강버스 운항 도우미</h1>
-  <p class="by">만든이 · 오동근 <span>(with 클로드)</span></p>
+  <div class="head">
+    <h1>한강버스 운항 도우미 <span class="by">· 오동근 (with 클로드)</span></h1>
+    <a href="#" id="toggleScene" class="minilink">다리 그림 숨기기</a>
+  </div>
   <p class="lede">통과높이 = 기준높이 − 현재 수위 · 출처 한강홍수통제소</p>
   <p class="disc">⚠ <b>참고용 정보입니다.</b> 실제 운항·통항 여부는 한강홍수통제소 등 공식 정보로 반드시 직접 확인하세요. 수위 데이터는 지연·중단될 수 있습니다.</p>
   <div class="expwarn" id="expWarn"></div>
@@ -177,8 +180,6 @@
       <button id="mManual" class="on">수동</button>
     </div>
   </div>
-
-  <div class="rowtoggle"><a href="#" id="toggleScene" class="minilink">다리 그림 숨기기</a></div>
 
   <div class="msg" id="msg"></div>
 
@@ -234,54 +235,69 @@
   </details>
 
   <details class="help">
-    <summary>도움말 · 초간단 Q&amp;A</summary>
+    <summary>도움말 · Q&amp;A</summary>
     <div class="qa">
       <div class="q">이 앱은 무엇인가요?</div>
-      <div class="a"><b>한강버스 운항 도우미</b>입니다. 잠수교·행주대교의 배가 지나갈 여유 높이(통과높이)와 팔당댐 방류량, 여의도·인천 물때를 한눈에 보여 줍니다. (만든이 오동근, with 클로드)</div>
+      <div class="a"><b>한강버스 운항 도우미</b>입니다. 한강버스 운항에 참고할 정보 — 잠수교·행주대교 <b>통과높이</b>(배가 지나갈 여유 높이), <b>팔당댐 방류량</b>, <b>여의도·인천 물때</b>, <b>조류세기</b> — 를 한 화면에 모아 보여 줍니다. (만든이 오동근, with 클로드)</div>
 
-      <div class="q">통과높이가 뭔가요?</div>
+      <div class="q">화면의 카드들은 각각 뭘 보여주나요?</div>
+      <div class="a">위에서부터<br>
+        · <b>팔당댐 방류</b> — 현재 방류량과 4시간 전 방류량(4시간 = 팔당 방류수가 여의도에 도달하는 시간).<br>
+        · <b>잠수교</b> — 잠수교의 통과높이와 안전 판정(여유/경고/금지).<br>
+        · <b>여의도 물때</b> — 여의도 앞 한강의 만조 시각·조위.<br>
+        · <b>행주대교</b> — 행주대교의 통과높이와 안전 판정.<br>
+        · <b>인천 물때 + 조류세기</b> — 인천의 만조·간조와 오늘 물살 세기.</div>
+
+      <div class="q">초록 ‘여유’ · 주황 ‘운항 경고’ · 빨강 ‘운항 금지’는 무슨 뜻인가요?</div>
+      <div class="a">잠수교·행주대교 카드의 상태 색입니다. <b>통과높이</b>가 그 다리의 기준선(금지선·경고선)보다 어디에 있는지를 나타냅니다.<br>
+        · <b class="s-safe">초록 ‘여유’</b> — 통과높이가 경고선보다 높아 안전합니다.<br>
+        · <b class="s-caution">주황 ‘운항 경고’</b> — 통과높이가 경고선과 금지선 사이입니다. 곧 위험해질 수 있으니 주의.<br>
+        · <b class="s-danger">빨강 ‘운항 금지’</b> — 통과높이가 금지선 아래입니다. 배가 지나갈 수 없습니다.</div>
+
+      <div class="q">왜 잠수교엔 주황 ‘경고’가 있고 행주대교엔 없나요?</div>
+      <div class="a">두 다리의 <b>위험 성격</b>이 다르기 때문입니다.<br>
+        · <b>잠수교</b>는 형하공간이 낮은(7 m대) <b>잠수 다리</b>라, 물이 조금만 불어도 잠깁니다. 그래서 <b>홍수(수위)</b>가 기준이고, 금지 <span class="num">7.3 m</span>·경고 <span class="num">7.8 m</span>로 <b>3단계</b>(여유/경고/금지)를 씁니다.<br>
+        · <b>행주대교</b>는 형하공간이 높아(13 m대) 홍수보다 <b>키 큰 배가 못 지나가는 것</b>이 문제입니다. 배 높이 기준 금지 <span class="num">11.2 m</span> 하나만 두고, 경고 단계 없이 <b>2단계</b>(여유/금지)로 봅니다.</div>
+
+      <div class="q">통과높이(다리 밑 여유)가 뭔가요?</div>
       <div class="a">다리 밑과 강 수면 사이의 빈 공간, 즉 배가 지나갈 여유 높이입니다. <b>통과높이 = 기준높이 − 현재 수위 + 오차보정</b>. 물이 차오르면 줄어듭니다.</div>
 
-      <div class="q">오차보정이 뭔가요?</div>
-      <div class="a">계산값과 실제 여유의 미세한 차이를 메우는 보정값입니다. 예: 잠수교는 <span class="num">+0.02 m</span>(2 cm)를 더해 표시합니다. 설정에서 교량별로 조정할 수 있습니다.</div>
+      <div class="q">기준높이 · gdt · 오차보정은?</div>
+      <div class="a">· <b>기준높이</b> = 다리 하단 해발표고(형하 표고) − 수위계 영점(gdt).<br>
+        &nbsp;&nbsp;잠수교 <b><span class="num">11.76 m</span></b>, 행주대교 <b><span class="num">13.40 m</span></b>.<br>
+        · <b>gdt(영점표고)</b> = 수위계가 ‘0 m’로 삼는 해발 높이. 실제 수면표고 = gdt + 수위.<br>
+        · <b>오차보정</b> = 계산값과 실제 여유의 미세 차이를 메우는 값(잠수교 <span class="num">+2 cm</span>). 설정에서 교량별로 조정.</div>
 
-      <div class="q">기준높이는 어떻게 정했나요?</div>
-      <div class="a">다리 하단의 해발표고(형하 표고)에서 수위계 영점(gdt)을 뺀 값입니다.<br>
-        · 잠수교 = 형하 11.69 − gdt(<span class="num">−0.068</span>) = <b><span class="num">11.76 m</span></b><br>
-        · 행주대교 = 형하 14.2 − gdt(<span class="num">0.803</span>) = <b><span class="num">13.40 m</span></b></div>
+      <div class="q">“운항금지선(7.30m)까지 X.XX m”는?</div>
+      <div class="a">괄호 안은 그 다리의 <b>운항금지선</b> 값이고, 뒤 숫자는 지금 통과높이가 그 선보다 얼마나 위(+)·아래(−)인지입니다. 0에 가까울수록 위험하고, 음수면 이미 금지선 아래입니다.</div>
 
-      <div class="q">gdt(영점표고)는?</div>
-      <div class="a">수위계가 ‘0 m’의 기준으로 삼는 해발 높이입니다. 실제 수면표고 = gdt + 수위.</div>
+      <div class="q">팔당댐 방류 카드는 어떻게 보나요?</div>
+      <div class="a">왼쪽은 <b>4시간 전</b>(지금 여의도에 도달 중인 방류량), 오른쪽은 <b>현재</b> 방류량입니다. 각 10분 단위 3회를 보여 줍니다. 방류량이 <b><span class="num">3000 ㎥/s</span></b>를 넘으면 그 열에 빨간 <b>‘운항금지’</b>가 뜹니다(현재 열은 4시간 뒤 예측).</div>
 
-      <div class="q">운항금지선 / 운항경고선 차이는?</div>
-      <div class="a">운항금지선은 그 밑으로 배가 못 지나가는 통과높이, 운항경고선은 금지선에 안전여유를 더한 ‘주의 시작’ 선입니다.<br>
-        · 잠수교 — <b>운항금지 <span class="num">7.3 m</span></b>, <b>운항경고 <span class="num">7.8 m</span></b>부터. 물이 불면 잠기는 다리라 <b>홍수(수위)</b>가 기준.<br>
-        · 행주대교 — <b>운항금지 <span class="num">11.2 m</span></b>. 형하공간이 높아 <b>배 높이</b>가 기준이며, 별도 경고선은 두지 않습니다.<br>
-        (경고선을 금지선 이하로 두면 ‘운항 경고’ 단계가 표시되지 않습니다.)</div>
+      <div class="q">물때(만조·간조)는 어떻게 보나요?</div>
+      <div class="a"><b>인천</b> 칸은 오늘 만조·간조를 모두, <b>여의도</b> 칸은 <b>인천 만조 +4시간</b>(방류수가 여의도에 도달하는 시간)으로 만조만 보여 줍니다. 각 줄에 <b>▲만조/▼간조</b> 화살표와 <b>직전 물때 대비 증감</b>(cm, 내려가면 음수)을 함께 표시합니다.</div>
 
-      <div class="q">왜 두 다리의 위험 성격이 다른가요?</div>
-      <div class="a">잠수교는 형하공간 7 m대의 낮은 잠수 다리라 수위가 조금만 올라도 막힙니다. 행주대교는 13 m대로 높아, 홍수보다 ‘키 큰 배가 못 지나가는’ 게 문제입니다.</div>
+      <div class="q">‘조류세기’는 뭔가요?</div>
+      <div class="a">오늘 물살(조류)이 센 편인지 약한 편인지를 <b>%</b>로 나타낸 값입니다. 오늘 <b>조차</b>(만조−간조 높이 차)를 인천 기준으로 환산합니다. 사리(대조) 때 세고 조금(소조) 때 약합니다. <b>실측 유속이 아니라 추정치</b>이니 참고만 하세요.</div>
+
+      <div class="q">“갱신 HH:MM · N분 전”은?</div>
+      <div class="a">데이터가 관측된 시각과 지금까지의 경과시간입니다. <b>30분</b>이 넘으면 빨간 ⚠로 바뀌어 ‘오래된 값’임을 알려 줍니다.</div>
 
       <div class="q">행주대교 수위가 음수로 나와요.</div>
-      <div class="a">행주대교는 서해 조석 구간이라, 썰물 때 수면이 영점(0.803 m) 아래로 내려가 수위가 음수로 찍힙니다. 정상입니다.</div>
-
-      <div class="q">“운항금지선(X m)까지 X.XX m”는 무슨 뜻?</div>
-      <div class="a">괄호 안은 그 다리의 운항금지선 값이고, 뒤 숫자는 지금 통과높이가 그 선보다 얼마나 위(+)·아래(−)인지입니다. 0에 가까울수록 위험하고, 음수면 이미 금지선 아래입니다.</div>
-
-      <div class="q">여의도·인천 물때는 어떻게 보나요?</div>
-      <div class="a">인천 칸은 오늘 만조·간조를 모두, 여의도 칸은 <b>인천 만조 +4시간</b>(방류수가 여의도에 도달하는 시간)으로 만조만 보여 줍니다. 화살표(▲만조/▼간조)와 직전 대비 증감(cm)도 함께 표시합니다.</div>
-
-      <div class="q">다리 그림을 안 보이게 할 수 있나요?</div>
-      <div class="a">상단의 <b>‘다리 그림 숨기기’</b>를 누르면 잠수교·행주대교의 그림이 접혀 공간이 절약됩니다. 이 설정은 그 기기에 기억됩니다.</div>
+      <div class="a">행주대교는 서해 조석 구간이라, 썰물 때 수면이 영점(<span class="num">0.803 m</span>) 아래로 내려가 수위가 음수로 찍힙니다. 정상입니다.</div>
 
       <div class="q">자동 / 수동 차이는?</div>
-      <div class="a">자동은 한강홍수통제소 실시간 수위를 받아 계산(인증키 필요), 수동은 수위를 직접 입력해 계산합니다. 팔당댐 방류량·출몰시각은 자동 모드에서, 물때는 예보값이라 두 모드 모두 표시됩니다.</div>
+      <div class="a"><b>자동</b>은 한강홍수통제소 실시간 수위를 받아 계산, <b>수동</b>은 수위를 직접 입력해 계산합니다. 팔당댐 방류량은 자동 모드에서, 물때·조류세기는 예보값이라 두 모드 모두 표시됩니다.</div>
+
+      <div class="q">다리 그림을 안 보이게 할 수 있나요?</div>
+      <div class="a">상단 오른쪽 <b>‘다리 그림 숨기기’</b>를 누르면 잠수교·행주대교 그림이 접혀 공간이 절약됩니다. 숨겨도 통과높이 숫자는 그대로 표시되며, 이 설정은 그 기기에 기억됩니다.</div>
+
+      <div class="q">이 정보만 믿고 운항해도 되나요?</div>
+      <div class="a">아니요. <b>참고용</b>입니다. 실제 운항·통항 여부는 한강홍수통제소 등 공식 정보로 반드시 직접 확인하세요.</div>
     </div>
   </details>
 
-  <footer>
-    각 교량의 <code>기준높이</code>·<code>관측소코드</code>는 회사 시스템 값으로 검증 후 설정에서 넣어 주세요.
-  </footer>
+  <footer id="footNote"><!-- 안내 문구 자리 (추후 문구 삽입용) --></footer>
 </div>
 
 <script>
@@ -407,7 +423,7 @@ function buildCards(){
   bridges.forEach(function(b){ var v=parseFloat(b.sampleWl); if(!isNaN(v)) renderBridge(b, v, nowStr()); });
 }
 
-var SCENE_H=150, SOFFIT_Y=44, ZONE=SCENE_H-SOFFIT_Y;
+var SCENE_H=120, SOFFIT_Y=44, ZONE=SCENE_H-SOFFIT_Y;
 function renderBridge(b, wl, when, ymdhm){
   var card=document.querySelector('.card[data-id="'+b.id+'"]'); if(!card)return;
   var q=function(r){return card.querySelector('[data-r='+r+']');};
@@ -523,7 +539,7 @@ function renderDam(nowWin, pastWin){
   $('damPastRows').innerHTML=rowsHtml(pastWin);
   $('damNowRows').innerHTML=rowsHtml(nowWin);
   // 각 열의 최신 방류량을 3000 운항금지선 기준으로 판정 (강조된 행 = 각 창의 최신값)
-  setDamStat($('damPastStat'), pastWin[0]?pastWin[0].v:NaN, '여의도 운항금지', '여의도 주의');
+  setDamStat($('damPastStat'), pastWin[0]?pastWin[0].v:NaN, '운항금지', '주의');
   setDamStat($('damNowStat'), nowWin[0]?nowWin[0].v:NaN, '4시간 뒤 운항금지', '4시간 뒤 주의');
   var tEl=$('damT'), latest=nowWin[0]?nowWin[0].ymdhm:null;
   if(latest){
