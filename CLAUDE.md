@@ -107,6 +107,11 @@
 - 예보값이라 신선도 경고 없음(대신 "MM/DD 예보" 표기). **수동 모드에서도 표시**(예보라 실시간 무관).
 - 관련 코드: `TIDE` 상수(incheon DT_0001, lagMin 240), `fetchTide()/renderTide()/addMin()/tideFail()`.
   `fetchAll()` 및 init(수동 모드)에서 호출. XML→`DOMParser` 파싱.
+- **일출·일몰·월출·월몰**(2026-07-06, 활성화 후 추가): 인천 물때 카드 하단에 통합(`#sunMoon` 2×2).
+  한국천문연구원 출몰시각 API(`CONFIG.RISESET_ENDPOINT`, B090041 getAreaRiseSetInfo, **물때와 같은
+  TIDE_KEY 사용**, CORS *). 파라미터 `serviceKey·locdate(오늘)·location=인천`. 필드 sunrise/sunset/
+  moonrise/moonset(HHMM, 공백 trim, 없으면 '—'). `RISESET`/`fetchRiseSet()/hhmm()`. fetchAll·init에서 호출.
+  위치는 인천(같은 카드 데이터와 일관). 서울과 1분 이내 차이.
 
 ## 파일 구조
 - `index.html` — 웹앱 전체(단일 파일). 실제 배포물.

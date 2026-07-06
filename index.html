@@ -117,6 +117,11 @@
   .trow .tv b{color:var(--text);font-weight:700;font-size:14px}
   .trow .dl{min-width:50px;text-align:right;font-weight:700;font-size:12.5px;font-variant-numeric:tabular-nums}
   .trow .dl.up{color:var(--caution)} .trow .dl.down{color:var(--water1)}
+  .sun{margin-top:9px;padding-top:9px;border-top:1px solid var(--line);
+    display:grid;grid-template-columns:1fr 1fr;gap:5px 10px}
+  .sun .si{font-size:12px;color:var(--muted);display:flex;align-items:baseline;gap:6px;padding:0 9px}
+  .sun .si .ic{font-size:11px} .sun .si .lb{min-width:30px}
+  .sun .si b{color:var(--text);font-weight:700;font-size:13px;font-variant-numeric:tabular-nums}
 
   .msg{font-size:12.5px;color:var(--muted);background:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;line-height:1.5;display:none}
   .msg.show{display:block}.msg.err{color:#ffc9cb;border-color:rgba(239,77,84,.4)}
@@ -189,6 +194,12 @@
     <div class="card tidecard" id="incheonCard">
       <div class="chead"><span class="nm">인천 물때</span><span class="t" id="incheonT">—</span></div>
       <div class="trows" id="incheonRows"><div class="trow"><span class="tv">—</span></div></div>
+      <div class="sun" id="sunMoon">
+        <div class="si"><span class="ic">☀</span><span class="lb">일출</span><b id="sunriseV">—</b></div>
+        <div class="si"><span class="ic">☀</span><span class="lb">일몰</span><b id="sunsetV">—</b></div>
+        <div class="si"><span class="ic">☾</span><span class="lb">월출</span><b id="moonriseV">—</b></div>
+        <div class="si"><span class="ic">☾</span><span class="lb">월몰</span><b id="moonsetV">—</b></div>
+      </div>
     </div>
   </div>
 
@@ -262,7 +273,10 @@ var CONFIG = {
   // 물때(조석예보 고저조) — 국립해양조사원, 공공데이터포털(data.go.kr) 발급 키. CORS 허용(*)이라 브라우저 직접 호출.
   // 항상 "서버 기준 오늘(KST)" 데이터를 돌려줌(date 파라미터는 무시됨). 필수 파라미터는 obsCode뿐.
   TIDE_ENDPOINT: "https://apis.data.go.kr/1192136/tideFcstHghLw/GetTideFcstHghLwApiService",
-  TIDE_KEY: "fd9c1ad3f2f974ca1662b8e4a33403269603cc4c74a8c4f74371b8c781f714b4"
+  TIDE_KEY: "fd9c1ad3f2f974ca1662b8e4a33403269603cc4c74a8c4f74371b8c781f714b4",
+
+  // 출몰시각(일출·일몰·월출·월몰) — 한국천문연구원. 위 물때와 같은 data.go.kr 계정 키(TIDE_KEY) 사용. CORS 허용(*).
+  RISESET_ENDPOINT: "https://apis.data.go.kr/B090041/openapi/service/RiseSetInfoService/getAreaRiseSetInfo"
 };
 
 /* ===== API 키 유효기간 — 만료 전 배너로 미리 알림(data.go.kr는 2년, 연장 신청 필요) =====
@@ -425,6 +439,7 @@ function fetchAll(){
   bridges.forEach(function(b){ if(b.obscd) fetchBridge(b); });
   fetchDam();
   fetchTide();
+  fetchRiseSet();
 }
 
 /* ----- 팔당댐 방류량 (HRFCO 댐 API, 수위와 같은 키 사용) ----- */
@@ -555,6 +570,28 @@ function renderTide(list){
   if($('yeouidoT'))$('yeouidoT').textContent=dstr;
 }
 
+/* ----- 출몰시각: 일출·일몰·월출·월몰 (한국천문연구원, data.go.kr · 인천 물때 카드에 통합) ----- */
+var RISESET={ location:"인천" };  // 인천 카드에 넣으므로 인천 기준(서울과 1분 이내 차이)
+function hhmm(s){ s=(s||'').replace(/\s/g,''); return s.length>=4 ? s.slice(0,2)+':'+s.slice(2,4) : '—'; }
+function fetchRiseSet(){
+  if(!CONFIG.TIDE_KEY || !CONFIG.RISESET_ENDPOINT) return;
+  var d=new Date(Date.now()+9*3600000), p=function(n){return(n<10?'0':'')+n;};  // 서버와 같은 KST 오늘
+  var ymd=''+d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate());
+  var url=CONFIG.RISESET_ENDPOINT+'?serviceKey='+encodeURIComponent(CONFIG.TIDE_KEY)+
+    '&locdate='+ymd+'&location='+encodeURIComponent(RISESET.location);
+  fetch(url,{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})
+   .then(function(t){
+     var it=new DOMParser().parseFromString(t,'application/xml').getElementsByTagName('item')[0];
+     if(!it)throw new Error('값 없음');
+     var g=function(tag){var el=it.getElementsByTagName(tag)[0];return el?el.textContent:'';};
+     var set=function(id,v){var el=$(id);if(el)el.textContent=hhmm(v);};  // 값 없으면(예: 월출 없는 날) '—'
+     set('sunriseV',g('sunrise')); set('sunsetV',g('sunset'));
+     set('moonriseV',g('moonrise')); set('moonsetV',g('moonset'));
+     var sm=$('sunMoon'); if(sm) sm.style.display='grid';
+   })
+   .catch(function(e){ var sm=$('sunMoon'); if(sm) sm.style.display='none'; });  // 실패 시 출몰 영역만 숨김
+}
+
 /* ----- 모드 ----- */
 function applyModeUI(){
   $('mAuto').className=G.mode==='auto'?'on':'';
@@ -646,7 +683,7 @@ loadSettingsUI();
 applyModeUI();
 applyAdmin();
 checkKeyExpiry();
-if(G.mode==='auto')fetchAll(); else fetchTide();  // 물때는 예보값이라 수동 모드에서도 표시
+if(G.mode==='auto')fetchAll(); else { fetchTide(); fetchRiseSet(); }  // 물때·출몰은 예보값이라 수동 모드에서도 표시
 setupTimer();
 </script>
 </body>
