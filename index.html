@@ -84,7 +84,7 @@
   .note b{color:#ffd9a3}
 
   /* 팔당댐 방류량 카드 */
-  .dam{display:flex;align-items:center;gap:10px;margin-top:2px}
+  .dam{display:flex;align-items:stretch;gap:12px;margin-top:2px}
   .dcol{flex:1;text-align:center;min-width:0}
   .dlbl{font-size:11px;color:var(--muted);margin-bottom:5px;text-align:center}
   .dlbl .du{font-size:10px}
@@ -95,9 +95,10 @@
   .drow .v{font-size:14px;font-weight:700}
   .drow.latest{background:rgba(255,255,255,.06)}
   .drow.latest .v{font-size:15px}
-  .darrow{font-size:18px;color:var(--muted);flex:none}
-  .darrow.up{color:var(--caution)}
-  .darrow.down{color:var(--water1)}
+  .ddiv{width:1px;background:var(--line);flex:none;margin:4px 0}
+  .dstat{margin-top:8px;text-align:center;font-size:11px;font-weight:700;min-height:16px}
+  .dstat.nogo{color:var(--danger)}
+  .dstat.warn{color:var(--caution)}
   .dnote{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:9px;padding-top:9px;border-top:1px solid var(--line)}
 
   .msg{font-size:12.5px;color:var(--muted);background:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;line-height:1.5;display:none}
@@ -149,11 +150,13 @@
       <div class="dcol">
         <div class="dlbl">4시간 전 방류량 <span class="du">(㎥/s)</span></div>
         <div class="drows" id="damPastRows"><div class="drow"><span class="tm">—</span><span class="v">—</span></div></div>
+        <div class="dstat" id="damPastStat"></div>
       </div>
-      <div class="darrow" id="damArrow">→</div>
+      <div class="ddiv"></div>
       <div class="dcol">
         <div class="dlbl">현재 방류량 <span class="du">(㎥/s)</span></div>
         <div class="drows" id="damNowRows"><div class="drow"><span class="tm">—</span><span class="v">—</span></div></div>
+        <div class="dstat" id="damNowStat"></div>
       </div>
     </div>
     <div class="dnote" id="damNote">4시간 전 방류량이 지금 여의도 부근에 도달하는 중입니다.</div>
@@ -366,7 +369,19 @@ function fetchAll(){
 }
 
 /* ----- 팔당댐 방류량 (HRFCO 댐 API, 수위와 같은 키 사용) ----- */
-var DAM={code:"1017310", lagMin:240, winMin:30};  // 팔당→여의도 도달 약 4시간, 표시창 30분(3회분)
+var DAM={code:"1017310", lagMin:240, winMin:30,  // 팔당→여의도 도달 약 4시간, 표시창 30분(3회분)
+  noGoFlow:3000,   // 이 방류량(㎥/s) 이상이면 운항금지 (회사 확인값)
+  warnFlow:null};  // 주의선 — 회사 확인 대기(2026-07-06 예정). 숫자를 넣으면 주황 '주의' 단계 활성화
+// 열별 최신 방류량을 절대값 기준으로 분류
+function damLevel(v){ if(v==null||isNaN(v))return null;
+  if(v>=DAM.noGoFlow)return 'nogo';
+  if(DAM.warnFlow!=null&&v>=DAM.warnFlow)return 'warn';
+  return 'ok'; }
+function setDamStat(el, v, nogoTxt, warnTxt){ if(!el)return;
+  var lv=damLevel(v);
+  if(lv==='nogo'){el.className='dstat nogo';el.textContent=nogoTxt;}
+  else if(lv==='warn'){el.className='dstat warn';el.textContent=warnTxt;}
+  else{el.className='dstat';el.textContent='';} }
 function damUrl(){
   // 기간 조회 시각은 반드시 10분 정각으로 — 어긋나면 API가 빈 행만 돌려줌
   var now=new Date(Date.now()+9*3600000);  // KST로 밀어둔 가상 UTC
@@ -394,7 +409,6 @@ function fetchDam(){
      showMsg('팔당댐 방류량 호출 실패: '+e.message+'. 새로고침으로 재시도할 수 있습니다.', true); });
 }
 function renderDam(nowWin, pastWin){
-  var avg=function(w){var s=0;for(var i=0;i<w.length;i++)s+=w[i].v;return w.length?s/w.length:NaN;};
   var rowsHtml=function(w){
     if(!w.length) return '<div class="drow"><span class="tm">—</span><span class="v">—</span></div>';
     var a=w.slice().reverse(), h='';  // 과거→최신 순으로, 맨 아래(최신)를 강조
@@ -404,12 +418,9 @@ function renderDam(nowWin, pastWin){
   };
   $('damPastRows').innerHTML=rowsHtml(pastWin);
   $('damNowRows').innerHTML=rowsHtml(nowWin);
-  var nv=avg(nowWin), pv=avg(pastWin);  // 화살표 판정용(30분 평균끼리 비교)
-  var ar=$('damArrow');  // ±2% 이내 변화는 사실상 동일로 보고 화살표 유지
-  if(!pastWin.length||isNaN(nv)||isNaN(pv)){ar.textContent='→';ar.className='darrow';}
-  else if(nv>pv*1.02){ar.textContent='▲';ar.className='darrow up';}
-  else if(nv<pv*0.98){ar.textContent='▼';ar.className='darrow down';}
-  else{ar.textContent='→';ar.className='darrow';}
+  // 각 열의 최신 방류량을 3000 운항금지선 기준으로 판정 (강조된 행 = 각 창의 최신값)
+  setDamStat($('damPastStat'), pastWin[0]?pastWin[0].v:NaN, '여의도 운항금지', '여의도 주의');
+  setDamStat($('damNowStat'), nowWin[0]?nowWin[0].v:NaN, '4시간 뒤 운항금지', '4시간 뒤 주의');
   var tEl=$('damT'), latest=nowWin[0]?nowWin[0].ymdhm:null;
   if(latest){
     var label='갱신 '+ymdhmToStr(latest), age=ymdhmAgeMin(latest);
