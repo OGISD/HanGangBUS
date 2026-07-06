@@ -122,12 +122,13 @@
   .trow .tv b{color:var(--text);font-weight:700;font-size:14px}
   .trow .dl{min-width:50px;text-align:right;font-weight:700;font-size:12.5px;font-variant-numeric:tabular-nums}
   .trow .dl.up{color:var(--caution)} .trow .dl.down{color:var(--water1)}
-  .sun{margin-top:9px;padding-top:9px;border-top:1px solid var(--line);
-    display:grid;grid-template-columns:1fr 1fr;gap:5px 10px}
-  .sun .si{font-size:12px;color:var(--muted);display:grid;grid-template-columns:16px 32px auto;
-    align-items:center;column-gap:6px;padding:0 9px}
-  .sun .si .ic{font-size:11px;justify-self:center}
-  .sun .si b{color:var(--text);font-weight:700;font-size:13px;font-variant-numeric:tabular-nums}
+  .tcur{margin-top:9px;padding-top:9px;border-top:1px solid var(--line);
+    display:flex;align-items:center;gap:9px;font-size:12px;color:var(--muted);padding-left:9px;padding-right:9px}
+  .tcur .lbl{font-weight:700;flex:none}
+  .tcur .bar{flex:1;height:9px;border-radius:5px;background:rgba(255,255,255,.1);overflow:hidden}
+  .tcur .fill{display:block;height:100%;border-radius:5px;width:0;
+    background:linear-gradient(90deg,var(--water1),var(--caution));transition:width .8s cubic-bezier(.3,.7,.2,1)}
+  .tcur .pct{font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;min-width:40px;text-align:right;flex:none}
 
   .msg{font-size:12.5px;color:var(--muted);background:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;line-height:1.5;display:none}
   .msg.show{display:block}.msg.err{color:#ffc9cb;border-color:rgba(239,77,84,.4)}
@@ -203,11 +204,10 @@
     <div class="card tidecard" id="incheonCard">
       <div class="chead"><span class="nm">인천 물때</span><span class="t" id="incheonT">—</span></div>
       <div class="trows" id="incheonRows"><div class="trow"><span class="tv">—</span></div></div>
-      <div class="sun" id="sunMoon">
-        <div class="si"><span class="ic">☀</span><span class="lb">일출</span><b id="sunriseV">—</b></div>
-        <div class="si"><span class="ic">☀</span><span class="lb">일몰</span><b id="sunsetV">—</b></div>
-        <div class="si"><span class="ic">☾</span><span class="lb">월출</span><b id="moonriseV">—</b></div>
-        <div class="si"><span class="ic">☾</span><span class="lb">월몰</span><b id="moonsetV">—</b></div>
+      <div class="tcur" id="tideCur" style="display:none">
+        <span class="lbl">조류세기</span>
+        <span class="bar"><span class="fill" id="tideCurFill"></span></span>
+        <span class="pct" id="tideCurPct">—</span>
       </div>
     </div>
   </div>
@@ -462,7 +462,6 @@ function fetchAll(){
   bridges.forEach(function(b){ if(b.obscd) fetchBridge(b); });
   fetchDam();
   fetchTide();
-  fetchRiseSet();
 }
 
 /* ----- 팔당댐 방류량 (HRFCO 댐 API, 수위와 같은 키 사용) ----- */
@@ -529,6 +528,9 @@ function renderDam(nowWin, pastWin){
 
 /* ----- 물때 (KHOA 조석예보 고저조, data.go.kr · CORS 허용, 브라우저 직접 호출) ----- */
 var TIDE={ incheon:"DT_0001", lagMin:240 };  // 여의도 만조 = 인천 만조 시각 +4시간(240분)
+// 조류세기(%) 추정: 오늘 조차(만조-간조 폭, cm)를 인천 기준 min~max로 0~100% 환산.
+// minRange/maxRange는 오늘 조차(707)가 바다타임 66%에 근접하도록 보정한 인천 근사값.
+var TIDE_STR={ minRange:270, maxRange:930 };
 function fetchTide(){
   if(!CONFIG.TIDE_KEY || !CONFIG.TIDE_ENDPOINT) return;
   // date는 무시되고 항상 서버 기준 오늘(KST) — obsCode만 있으면 됨. 응답은 XML.
@@ -591,9 +593,15 @@ function renderTide(list){
   var dstr=ymd?(ymd.slice(5,7)+'/'+ymd.slice(8,10)+' 예보'):'';
   if($('incheonT'))$('incheonT').textContent=dstr;
   if($('yeouidoT'))$('yeouidoT').textContent=dstr;
+  // 조류세기(%): 오늘 조차(최고−최저)를 인천 기준으로 정규화한 추정치
+  var vals=sorted.map(function(e){return e.val;});
+  var range=Math.max.apply(null,vals)-Math.min.apply(null,vals);
+  var pct=Math.round(Math.max(0,Math.min(100,(range-TIDE_STR.minRange)/(TIDE_STR.maxRange-TIDE_STR.minRange)*100)));
+  if($('tideCur')){ $('tideCurFill').style.width=pct+'%'; $('tideCurPct').textContent=pct+'%'; $('tideCur').style.display='flex'; }
 }
 
-/* ----- 출몰시각: 일출·일몰·월출·월몰 (한국천문연구원, data.go.kr · 인천 물때 카드에 통합) ----- */
+/* ----- 출몰시각: 일출·일몰·월출·월몰 (한국천문연구원, data.go.kr)
+   ※ 2026-07-06 인천 카드에서 조류세기로 교체하며 현재 미사용(호출 안 함). 재도입 대비 코드 보존. ----- */
 var RISESET={ location:"인천" };  // 인천 카드에 넣으므로 인천 기준(서울과 1분 이내 차이)
 function hhmm(s){ s=(s||'').replace(/\s/g,''); return s.length>=4 ? s.slice(0,2)+':'+s.slice(2,4) : '—'; }
 function fetchRiseSet(){
@@ -715,7 +723,7 @@ applyModeUI();
 applyAdmin();
 applyScene();
 checkKeyExpiry();
-if(G.mode==='auto')fetchAll(); else { fetchTide(); fetchRiseSet(); }  // 물때·출몰은 예보값이라 수동 모드에서도 표시
+if(G.mode==='auto')fetchAll(); else fetchTide();  // 물때는 예보값이라 수동 모드에서도 표시
 setupTimer();
 </script>
 </body>

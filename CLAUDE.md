@@ -99,6 +99,13 @@
 - 관련 코드: `DAM` 상수(코드 1017310, lagMin 240, winMin 30, noGoFlow 3000, warnFlow null),
   `damUrl()/fetchDam()/renderDam()/damLevel()/setDamStat()`. `fetchAll()`이 교량과 함께 호출.
 
+## 조류세기 (2026-07-06, 인천 카드 하단)
+- 인천 카드에서 일출/일몰 자리를 **조류세기 막대바(%)**로 교체(방법 A, 사용자 선택).
+- 계산: 오늘 조차(만조−간조 폭 cm)를 `TIDE_STR`(minRange 270·maxRange 930)로 0~100% 환산.
+  오늘 조차 707 → 66%(바다타임 근접). `renderTide` 끝에서 계산, `#tideCur/#tideCurFill/#tideCurPct`.
+- ⚠ **추정치**(실측 유속 아님). 맘에 안 들면 방법 B(KHOA 조류예보 API 신규 발급)로 전환 검토.
+- 출몰시각(일출/일몰/월출/월몰) 코드(`fetchRiseSet` 등)는 미사용으로 보존(호출 안 함).
+
 ## 물때 카드: 여의도·인천 (2026-07-06 추가, v0.5.0)
 - **인천 물때 카드**(`#incheonCard`): 인천(DT_0001)의 오늘 만조·간조 4개 전부 표시(시각·조위 cm, 만조 강조).
 - **여의도 물때 카드**(`#yeouidoCard`): 인천 **만조만 2개** 골라 시각 +4시간(`TIDE.lagMin`=240). (2026-07-06 직원
