@@ -503,7 +503,7 @@ function loadTideCache(){ try{ return JSON.parse(store.get('hb_tidelast',''))||{
 // 한 물때 행 HTML — e:{val,high,delta}, hm:표시시각, nextDay:익일 여부
 function tideRow(hm, e, nextDay){
   var arrow=e.high?'▲':'▼', dcls=e.high?'up':'down';
-  var dl='<span class="dl '+dcls+'">'+arrow+(e.delta==null?'':' '+Math.abs(e.delta))+'</span>';
+  var dl='<span class="dl '+dcls+'">'+arrow+(e.delta==null?'':' '+e.delta)+'</span>';
   return '<div class="trow'+(e.high?' hi':'')+'">'+
     '<span class="tt">'+hm+(nextDay?'<span class="nd">익일</span>':'')+'</span>'+
     '<span class="tg '+(e.high?'hi':'lo')+'">'+(e.high?'만조':'간조')+'</span>'+
