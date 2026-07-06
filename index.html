@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#07141f">
-<title>한강 교량 통과높이</title>
+<title>한강버스 운항 도우미</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/[email protected]/dist/web/static/pretendard.min.css">
 <style>
   :root{
@@ -32,6 +32,11 @@
   .expwarn{font-size:11.5px;line-height:1.55;color:#ffe0b0;background:rgba(245,177,61,.14);
     border:1px solid rgba(245,177,61,.4);border-radius:10px;padding:9px 11px;margin:0 0 12px;display:none}
   .expwarn.on{display:block} .expwarn b{color:#fff}
+  .by{font-size:12px;font-weight:700;color:#9db4c8;margin:1px 0 6px}
+  .by span{color:var(--muted);font-weight:500}
+  .rowtoggle{text-align:right;margin:-4px 0 12px}
+  .minilink{color:var(--muted);font-size:11.5px;text-decoration:underline;cursor:pointer}
+  body.noscene .scene{display:none}
 
   /* 상단 컨트롤 */
   .bar{display:flex;gap:8px;margin-bottom:12px}
@@ -51,7 +56,7 @@
   .chead .t{margin-left:auto;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums;text-align:right;line-height:1.3}
   .chead .t.stale{color:var(--danger);font-weight:700}
 
-  .scene{position:relative;height:200px;border-radius:13px;overflow:hidden;
+  .scene{position:relative;height:150px;border-radius:13px;overflow:hidden;
     background:linear-gradient(#0a2236,#0c2b42 55%);border:1px solid var(--line)}
   .deck{position:absolute;left:0;right:0;top:26px;height:18px;z-index:4;
     background:linear-gradient(var(--concrete),var(--concrete-d));
@@ -153,7 +158,8 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>한강 교량 통과높이</h1>
+  <h1>한강버스 운항 도우미</h1>
+  <p class="by">만든이 · 오동근 <span>(with 클로드)</span></p>
   <p class="lede">통과높이 = 기준높이 − 현재 수위 · 출처 한강홍수통제소</p>
   <p class="disc">⚠ <b>참고용 정보입니다.</b> 실제 운항·통항 여부는 한강홍수통제소 등 공식 정보로 반드시 직접 확인하세요. 수위 데이터는 지연·중단될 수 있습니다.</p>
   <div class="expwarn" id="expWarn"></div>
@@ -165,6 +171,8 @@
       <button id="mManual" class="on">수동</button>
     </div>
   </div>
+
+  <div class="rowtoggle"><a href="#" id="toggleScene" class="minilink">다리 그림 숨기기</a></div>
 
   <div class="msg" id="msg"></div>
 
@@ -189,7 +197,7 @@
   <div id="cards"><!-- 교량 카드가 여기 삽입됨. 순서: 잠수교 → (여의도 물때) → 행주대교 → (인천 물때) -->
     <div class="card tidecard" id="yeouidoCard">
       <div class="chead"><span class="nm">여의도 물때</span><span class="t" id="yeouidoT">—</span></div>
-      <div class="tnote">인천 물때 시각 +4시간 = 여의도 물때 (오늘) · 단위 cm</div>
+      <div class="tnote">인천 만조 +4시간 = 여의도 만조 (오늘) · 단위 cm</div>
       <div class="trows" id="yeouidoRows"><div class="trow"><span class="tv">—</span></div></div>
     </div>
     <div class="card tidecard" id="incheonCard">
@@ -223,8 +231,14 @@
   <details class="help">
     <summary>도움말 · 초간단 Q&amp;A</summary>
     <div class="qa">
+      <div class="q">이 앱은 무엇인가요?</div>
+      <div class="a"><b>한강버스 운항 도우미</b>입니다. 잠수교·행주대교의 배가 지나갈 여유 높이(통과높이)와 팔당댐 방류량, 여의도·인천 물때를 한눈에 보여 줍니다. (만든이 오동근, with 클로드)</div>
+
       <div class="q">통과높이가 뭔가요?</div>
-      <div class="a">다리 밑과 강 수면 사이의 빈 공간, 즉 배가 지나갈 여유 높이입니다. <b>통과높이 = 기준높이 − 현재 수위</b>. 물이 차오르면 줄어듭니다.</div>
+      <div class="a">다리 밑과 강 수면 사이의 빈 공간, 즉 배가 지나갈 여유 높이입니다. <b>통과높이 = 기준높이 − 현재 수위 + 오차보정</b>. 물이 차오르면 줄어듭니다.</div>
+
+      <div class="q">오차보정이 뭔가요?</div>
+      <div class="a">계산값과 실제 여유의 미세한 차이를 메우는 보정값입니다. 예: 잠수교는 <span class="num">+0.02 m</span>(2 cm)를 더해 표시합니다. 설정에서 교량별로 조정할 수 있습니다.</div>
 
       <div class="q">기준높이는 어떻게 정했나요?</div>
       <div class="a">다리 하단의 해발표고(형하 표고)에서 수위계 영점(gdt)을 뺀 값입니다.<br>
@@ -234,10 +248,11 @@
       <div class="q">gdt(영점표고)는?</div>
       <div class="a">수위계가 ‘0 m’의 기준으로 삼는 해발 높이입니다. 실제 수면표고 = gdt + 수위.</div>
 
-      <div class="q">운항 금지선 / 위험 경고선 차이는?</div>
-      <div class="a">금지선은 그 밑으로 배가 못 지나가는 통과높이, 경고선은 금지선에 안전여유를 더한 ‘주의 시작’ 선입니다.<br>
-        · 잠수교 <span class="num">7.3 / 7.6 m</span> — 물이 불면 잠기는 다리라 <b>홍수(수위)</b>가 기준.<br>
-        · 행주대교 <span class="num">11.0 / 13.0 m</span> — 형하공간이 13 m대로 높아 홍수가 아니라 <b>배 높이(마스트 11 m + 여유 2 m)</b>가 기준.</div>
+      <div class="q">운항금지선 / 운항경고선 차이는?</div>
+      <div class="a">운항금지선은 그 밑으로 배가 못 지나가는 통과높이, 운항경고선은 금지선에 안전여유를 더한 ‘주의 시작’ 선입니다.<br>
+        · 잠수교 — <b>운항금지 <span class="num">7.3 m</span></b>, <b>운항경고 <span class="num">7.8 m</span></b>부터. 물이 불면 잠기는 다리라 <b>홍수(수위)</b>가 기준.<br>
+        · 행주대교 — <b>운항금지 <span class="num">11.2 m</span></b>. 형하공간이 높아 <b>배 높이</b>가 기준이며, 별도 경고선은 두지 않습니다.<br>
+        (경고선을 금지선 이하로 두면 ‘운항 경고’ 단계가 표시되지 않습니다.)</div>
 
       <div class="q">왜 두 다리의 위험 성격이 다른가요?</div>
       <div class="a">잠수교는 형하공간 7 m대의 낮은 잠수 다리라 수위가 조금만 올라도 막힙니다. 행주대교는 13 m대로 높아, 홍수보다 ‘키 큰 배가 못 지나가는’ 게 문제입니다.</div>
@@ -245,11 +260,17 @@
       <div class="q">행주대교 수위가 음수로 나와요.</div>
       <div class="a">행주대교는 서해 조석 구간이라, 썰물 때 수면이 영점(0.803 m) 아래로 내려가 수위가 음수로 찍힙니다. 정상입니다.</div>
 
-      <div class="q">“금지선까지 X.XX m”는 무슨 뜻?</div>
-      <div class="a">지금 통과높이가 운항 금지선보다 얼마나 위(+)·아래(−)인지입니다. 0에 가까울수록 위험하고, 음수면 이미 금지선 아래입니다.</div>
+      <div class="q">“운항금지선(X m)까지 X.XX m”는 무슨 뜻?</div>
+      <div class="a">괄호 안은 그 다리의 운항금지선 값이고, 뒤 숫자는 지금 통과높이가 그 선보다 얼마나 위(+)·아래(−)인지입니다. 0에 가까울수록 위험하고, 음수면 이미 금지선 아래입니다.</div>
+
+      <div class="q">여의도·인천 물때는 어떻게 보나요?</div>
+      <div class="a">인천 칸은 오늘 만조·간조를 모두, 여의도 칸은 <b>인천 만조 +4시간</b>(방류수가 여의도에 도달하는 시간)으로 만조만 보여 줍니다. 화살표(▲만조/▼간조)와 직전 대비 증감(cm)도 함께 표시합니다.</div>
+
+      <div class="q">다리 그림을 안 보이게 할 수 있나요?</div>
+      <div class="a">상단의 <b>‘다리 그림 숨기기’</b>를 누르면 잠수교·행주대교의 그림이 접혀 공간이 절약됩니다. 이 설정은 그 기기에 기억됩니다.</div>
 
       <div class="q">자동 / 수동 차이는?</div>
-      <div class="a">자동은 한강홍수통제소 실시간 수위를 받아 계산(인증키 필요), 수동은 수위를 직접 입력해 계산합니다.</div>
+      <div class="a">자동은 한강홍수통제소 실시간 수위를 받아 계산(인증키 필요), 수동은 수위를 직접 입력해 계산합니다. 팔당댐 방류량·출몰시각은 자동 모드에서, 물때는 예보값이라 두 모드 모두 표시됩니다.</div>
     </div>
   </details>
 
@@ -294,11 +315,12 @@ var store={get:function(k,d){try{var v=localStorage.getItem(k);return v===null?d
 
 /* ===== 교량 설정 (여기에 항목을 추가하면 카드가 늘어남) ===== */
 var DEFAULT_BRIDGES=[
-  {id:"jamsu", name:"잠수교", obscd:"1018680", base:11.76, noGo:7.3, warn:7.6, verified:true, sampleWl:4.35},
-  {id:"haengju", name:"행주대교", obscd:"1019630", base:13.4, noGo:11.0, warn:13.0, verified:true, sampleWl:-0.2}
+  // offset: 통과높이 오차보정(m). warn<=noGo 이면 경고 단계 없음(여유/운항금지 2단계).
+  {id:"jamsu", name:"잠수교", obscd:"1018680", base:11.76, noGo:7.3, warn:7.8, offset:0.02, verified:true, sampleWl:4.35},
+  {id:"haengju", name:"행주대교", obscd:"1019630", base:13.4, noGo:11.2, warn:11.2, offset:0, verified:true, sampleWl:-0.2}
 ];
 var bridges;
-try{ bridges=JSON.parse(store.get('hb_bridges4','')); if(!Array.isArray(bridges)||!bridges.length) bridges=null; }catch(e){ bridges=null; }
+try{ bridges=JSON.parse(store.get('hb_bridges5','')); if(!Array.isArray(bridges)||!bridges.length) bridges=null; }catch(e){ bridges=null; }
 if(!bridges) bridges=DEFAULT_BRIDGES.map(function(b){return Object.assign({},b);});
 
 var G={ apiKey: CONFIG.API_KEY || store.get('hb_key',''),
@@ -379,12 +401,12 @@ function buildCards(){
   bridges.forEach(function(b){ var v=parseFloat(b.sampleWl); if(!isNaN(v)) renderBridge(b, v, nowStr()); });
 }
 
-var SCENE_H=200, SOFFIT_Y=44, ZONE=SCENE_H-SOFFIT_Y;
+var SCENE_H=150, SOFFIT_Y=44, ZONE=SCENE_H-SOFFIT_Y;
 function renderBridge(b, wl, when, ymdhm){
   var card=document.querySelector('.card[data-id="'+b.id+'"]'); if(!card)return;
   var q=function(r){return card.querySelector('[data-r='+r+']');};
-  var pass=b.base-wl, ppm=ZONE/b.base;
-  var surfaceY=Math.max(SOFFIT_Y, Math.min(SCENE_H, SOFFIT_Y+(b.base-wl)*ppm));
+  var pass=b.base-wl+(b.offset||0), ppm=ZONE/b.base;  // offset: 통과높이 오차보정
+  var surfaceY=Math.max(SOFFIT_Y, Math.min(SCENE_H, SOFFIT_Y+pass*ppm));
   q('water').style.height=(SCENE_H-surfaceY)+'px';
   q('readout').style.top=Math.max(SOFFIT_Y+18,(SOFFIT_Y+surfaceY)/2)+'px';
   // 갱신 시각 + (자동 호출 시) 데이터 경과시간 · 오래되면 빨간 경고
@@ -409,11 +431,11 @@ function renderBridge(b, wl, when, ymdhm){
   q('big').innerHTML=(pass<=0?'침수':fmt(pass,2))+'<span>m</span>';
   var lbl,scls,bcls;
   if(pass<b.noGo){lbl='운항 금지';scls='s-danger';bcls='bg-danger';}
-  else if(pass<b.warn){lbl='위험';scls='s-danger';bcls='bg-danger';}
+  else if(pass<b.warn){lbl='운항 경고';scls='s-caution';bcls='bg-caution';}  // warn<=noGo면 이 단계 안 뜸
   else{lbl='여유';scls='s-safe';bcls='bg-safe';}
   q('dot').className='dot '+bcls;
   q('lbl').className='st-lbl '+scls; q('lbl').textContent=lbl;
-  q('sub').textContent='금지선까지 '+fmt(pass-b.noGo,2)+' m';
+  q('sub').textContent='운항금지선('+fmt(b.noGo,2)+'m)까지 '+fmt(pass-b.noGo,2)+' m';
 }
 
 /* ----- 자동: HRFCO ----- */
@@ -565,7 +587,7 @@ function renderTide(list){
   store.set('hb_tidelast',JSON.stringify(nc));
   // 인천: 물때 전부 / 여의도: 물때 전부 +4시간
   $('incheonRows').innerHTML=sorted.map(function(e){ return tideRow(e.hm, e, false); }).join('');
-  $('yeouidoRows').innerHTML=sorted.map(function(e){ var r=addMin(e.hm,TIDE.lagMin); return tideRow(r.hm, e, r.nextDay); }).join('');
+  $('yeouidoRows').innerHTML=sorted.filter(function(e){return e.high;}).map(function(e){ var r=addMin(e.hm,TIDE.lagMin); return tideRow(r.hm, e, r.nextDay); }).join('') || '<div class="trow"><span class="tv">오늘 만조 정보 없음</span></div>';
   var dstr=ymd?(ymd.slice(5,7)+'/'+ymd.slice(8,10)+' 예보'):'';
   if($('incheonT'))$('incheonT').textContent=dstr;
   if($('yeouidoT'))$('yeouidoT').textContent=dstr;
@@ -614,8 +636,9 @@ function buildBridgeSettings(){
        '<div style="font-weight:700;font-size:13px;margin-bottom:2px">'+b.name+'</div>'+
        '<label>관측소 코드</label><input type="text" data-s="obscd" data-i="'+i+'" value="'+(b.obscd||'')+'" placeholder="예: 1018680">'+
        '<div class="two"><div><label>기준높이(m)</label><input type="number" step="0.01" data-s="base" data-i="'+i+'" value="'+b.base+'"></div>'+
-       '<div><label>금지선(m)</label><input type="number" step="0.1" data-s="noGo" data-i="'+i+'" value="'+b.noGo+'"></div>'+
-       '<div><label>경고선(m)</label><input type="number" step="0.1" data-s="warn" data-i="'+i+'" value="'+b.warn+'"></div></div>'+
+       '<div><label>오차보정(m)</label><input type="number" step="0.01" data-s="offset" data-i="'+i+'" value="'+(b.offset||0)+'"></div></div>'+
+       '<div class="two"><div><label>운항금지선(m)</label><input type="number" step="0.1" data-s="noGo" data-i="'+i+'" value="'+b.noGo+'"></div>'+
+       '<div><label>경고선(m·금지선 이하면 경고 없음)</label><input type="number" step="0.1" data-s="warn" data-i="'+i+'" value="'+b.warn+'"></div></div>'+
        '<label class="check"><input type="checkbox" data-s="verified" data-i="'+i+'" '+(b.verified?'checked':'')+'> 검증됨(임시값 표시 끄기)</label>'+
        '</div>';
   });
@@ -633,11 +656,11 @@ function saveSettings(){
     var i=+el.getAttribute('data-i'), k=el.getAttribute('data-s');
     if(k==='verified') bridges[i].verified=el.checked;
     else if(k==='obscd') bridges[i].obscd=el.value.trim();
-    else bridges[i][k]=parseFloat(el.value)||bridges[i][k];
+    else { var n=parseFloat(el.value); if(!isNaN(n)) bridges[i][k]=n; }  // 0(오차보정 등)도 저장되도록
   });
   store.set('hb_key',G.apiKey); store.set('hb_proxy',G.useProxy?'1':'0');
   store.set('hb_proxyurl',G.proxyUrl); store.set('hb_refresh',G.refreshMin);
-  store.set('hb_bridges4',JSON.stringify(bridges));
+  store.set('hb_bridges5',JSON.stringify(bridges));
   buildCards(); buildBridgeSettings(); setupTimer();
   if(G.mode==='auto')fetchAll();
   showMsg('설정을 저장했습니다.'); setTimeout(hideMsg,1600);
@@ -657,6 +680,13 @@ $('refresh').onclick=function(){
     var v=parseFloat(card.querySelector('[data-r=wl]').value); if(!isNaN(v))renderBridge(b,v,nowStr());});
 };
 $('saveSet').onclick=saveSettings;
+
+/* ----- 다리 그림 온/오프 (공간 절약용, 기기에 기억) ----- */
+var showScene = store.get('hb_scene','1')!=='0';
+function applyScene(){ document.body.classList.toggle('noscene', !showScene);
+  var t=$('toggleScene'); if(t) t.textContent = showScene?'다리 그림 숨기기':'다리 그림 보이기'; }
+if($('toggleScene')) $('toggleScene').onclick=function(e){ e.preventDefault();
+  showScene=!showScene; store.set('hb_scene', showScene?'1':'0'); applyScene(); };
 
 /* ----- 설정 잠금 (비밀 URL ?admin · 제목 5회 탭) ----- */
 function adminUnlocked(){ return store.get('hb_admin','')==='1'; }
@@ -683,6 +713,7 @@ buildCards();
 loadSettingsUI();
 applyModeUI();
 applyAdmin();
+applyScene();
 checkKeyExpiry();
 if(G.mode==='auto')fetchAll(); else { fetchTide(); fetchRiseSet(); }  // 물때·출몰은 예보값이라 수동 모드에서도 표시
 setupTimer();
