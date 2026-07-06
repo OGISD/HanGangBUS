@@ -49,8 +49,12 @@
   `.../dam/list/10M/{dmobscd}.json`(최신 1건) 또는 `.../dam/list/10M/{code}/{sdt}/{edt}.json`(기간).
   팔당댐 코드 `1017310`, 방류량 필드 `tototf`(㎥/s), 유입량 `inf`, 저수위 `swl`.
   ⚠ 기간 조회의 sdt/edt는 **10분 정각**(…00/…10)으로 맞출 것 — 어긋나면 값이 빈 행만 반환됨.
-- 물때(조석) 데이터는 HRFCO에 없음 → 국립해양조사원(KHOA) 바다누리 API 필요(별도 무료 키,
-  2026-07-05 사이트 점검 중이라 CORS 등 미검증). 조석예보는 연간 예측값이라 정적 내장 대안도 있음.
+- **물때(조석예보 고저조)는 data.go.kr 국립해양조사원 API (2026-07-06 검증·구현)**:
+  `https://apis.data.go.kr/1192136/tideFcstHghLw/GetTideFcstHghLwApiService?serviceKey={키}&obsCode={코드}`
+  → 응답 **XML**(`DOMParser`로 파싱). 필드 `predcDt`(예보시각), `predcTdlvVl`(조위 cm), `extrSe`(홀수1·3=만조/짝수2·4=간조).
+  ⚠ **date 파라미터는 무시됨 — 항상 서버 기준 오늘(KST)만 반환.** 필수 파라미터는 `obsCode`뿐.
+  `Access-Control-Allow-Origin: *` 라 HRFCO처럼 브라우저 직접 호출 가능(프록시 불필요).
+  관측소 코드: **인천 `DT_0001`**(사용 중), 경인항 `DT_0058`(미사용, 기록만).
 - **방문자 브라우저가 HRFCO를 직접 호출**한다(프록시 없음). HRFCO가
   `Access-Control-Allow-Origin: *` 를 주므로 브라우저 직접 호출이 가능 → 프록시 불필요.
 - **❗ 워커/해외 프록시 방식은 폐기.** HRFCO API는 **해외 IP 요청에 응답하지 않음**
@@ -84,6 +88,18 @@
 - 신선도 경고는 교량 카드와 동일 로직(`STALE_MIN` 공유). 수동 모드에서는 조회 안 함(안내 문구).
 - 관련 코드: `DAM` 상수(코드 1017310, lagMin 240, winMin 30, noGoFlow 3000, warnFlow null),
   `damUrl()/fetchDam()/renderDam()/damLevel()/setDamStat()`. `fetchAll()`이 교량과 함께 호출.
+
+## 물때 카드: 여의도·인천 (2026-07-06 추가, v0.5.0)
+- **인천 물때 카드**(`#incheonCard`): 인천(DT_0001)의 오늘 만조·간조 4개 전부 표시(시각·조위 cm, 만조 강조).
+- **여의도 물때 카드**(`#yeouidoCard`): 인천 **만조만** 골라 시각 +4시간(`TIDE.lagMin`=240) → 여의도 만조 2개.
+  4시간 = 팔당댐 카드와 같은 도달 시간 개념. +4시간이 자정을 넘으면 "(익일)" 표기.
+  조위(만조량)는 인천 값을 그대로 표시(간이 방식 — 회사 결정. 실제 여의도 실측 아님).
+- **카드 순서(화이트보드)**: 팔당댐 → 잠수교 → 여의도물때 → 행주대교 → 인천물때.
+  구현: 물때 카드는 `#cards` 안 정적 HTML, `buildCards()`가 교량 카드(`.card[data-id]`)만 지우고
+  잠수교는 여의도 앞·나머지 교량은 인천 앞에 삽입. (교량 추가 시 이 삽입 규칙 확인 필요)
+- 예보값이라 신선도 경고 없음(대신 "MM/DD 예보" 표기). **수동 모드에서도 표시**(예보라 실시간 무관).
+- 관련 코드: `TIDE` 상수(incheon DT_0001, lagMin 240), `fetchTide()/renderTide()/addMin()/tideFail()`.
+  `fetchAll()` 및 init(수동 모드)에서 호출. XML→`DOMParser` 파싱.
 
 ## 파일 구조
 - `index.html` — 웹앱 전체(단일 파일). 실제 배포물.
