@@ -260,6 +260,9 @@
         · <b>잠수교</b>는 형하공간이 낮은(7 m대) <b>잠수 다리</b>라, 물이 조금만 불어도 잠깁니다. 그래서 <b>홍수(수위)</b>가 기준이고, 금지 <span class="num">7.3 m</span>·경고 <span class="num">7.8 m</span>로 <b>3단계</b>(여유/경고/금지)를 씁니다.<br>
         · <b>행주대교</b>는 형하공간이 높아(13 m대) 홍수보다 <b>키 큰 배가 못 지나가는 것</b>이 문제입니다. 배 높이 기준 금지 <span class="num">11.2 m</span> 하나만 두고, 경고 단계 없이 <b>2단계</b>(여유/금지)로 봅니다.</div>
 
+      <div class="q">잠수교 ‘저수위 경고’(주황)는 무슨 뜻인가요?</div>
+      <div class="a">물이 많이 빠져 통과높이가 <span class="num">9.1 m</span>를 넘으면(=수위가 매우 낮으면) 강바닥이 얕아 <b>저수심 위험</b>이 생겨 주황 ‘저수위 경고’로 알립니다. 다리 밑이 막히는 게 아니라, 반대로 <b>물이 너무 얕아</b> 조심해야 하는 상태입니다. (잠수교만 적용)</div>
+
       <div class="q">통과높이(다리 밑 여유)가 뭔가요?</div>
       <div class="a">다리 밑과 강 수면 사이의 빈 공간, 즉 배가 지나갈 여유 높이입니다. <b>통과높이 = 기준높이 − 현재 수위 + 오차보정</b>. 물이 차오르면 줄어듭니다.</div>
 
@@ -342,12 +345,13 @@ var store={get:function(k,d){try{var v=localStorage.getItem(k);return v===null?d
 
 /* ===== 교량 설정 (여기에 항목을 추가하면 카드가 늘어남) ===== */
 var DEFAULT_BRIDGES=[
-  // offset: 통과높이 오차보정(m). warn<=noGo 이면 경고 단계 없음(여유/운항금지 2단계).
-  {id:"jamsu", name:"잠수교", obscd:"1018680", base:11.76, noGo:7.3, warn:7.8, offset:0.02, verified:true, sampleWl:4.35},
-  {id:"haengju", name:"행주대교", obscd:"1019630", base:13.4, noGo:11.2, warn:11.2, offset:0, verified:true, sampleWl:-0.2}
+  // offset: 통과높이 오차보정(m). warn<=noGo 이면 경고 단계 없음. lowWarn: 통과높이 초과 시 저수심(저수위) 경고.
+  // noGoPrefix: 상태줄 '운항금지선…' 앞에 붙는 문구(행주=마스트 기준 표시).
+  {id:"jamsu", name:"잠수교", obscd:"1018680", base:11.76, noGo:7.3, warn:7.8, offset:0.02, lowWarn:9.1, verified:true, sampleWl:4.35},
+  {id:"haengju", name:"행주대교", obscd:"1019630", base:13.4, noGo:11.2, warn:11.2, offset:0, noGoPrefix:"마스트 장착시 ", verified:true, sampleWl:-0.2}
 ];
 var bridges;
-try{ bridges=JSON.parse(store.get('hb_bridges5','')); if(!Array.isArray(bridges)||!bridges.length) bridges=null; }catch(e){ bridges=null; }
+try{ bridges=JSON.parse(store.get('hb_bridges6','')); if(!Array.isArray(bridges)||!bridges.length) bridges=null; }catch(e){ bridges=null; }
 if(!bridges) bridges=DEFAULT_BRIDGES.map(function(b){return Object.assign({},b);});
 
 var G={ apiKey: CONFIG.API_KEY || store.get('hb_key',''),
@@ -459,13 +463,15 @@ function renderBridge(b, wl, when, ymdhm){
   q('dot').style.background=''; q('lbl').style.color='';
   q('big').innerHTML=(pass<=0?'침수':fmt(pass,2))+'<span>m</span>';
   q('cpass').innerHTML='<span class="n">'+q('big').innerHTML+'</span><span class="l">'+q('cap').textContent+'</span>';  // 그림 숨김 시 표시
-  var lbl,scls,bcls;
+  var lbl,scls,bcls,sub=(b.noGoPrefix||'')+'운항금지선('+fmt(b.noGo,2)+'m)까지 '+fmt(pass-b.noGo,2)+' m';
   if(pass<b.noGo){lbl='운항 금지';scls='s-danger';bcls='bg-danger';}
   else if(pass<b.warn){lbl='운항 경고';scls='s-caution';bcls='bg-caution';}  // warn<=noGo면 이 단계 안 뜸
+  else if(b.lowWarn && pass>=b.lowWarn){lbl='저수위 경고';scls='s-caution';bcls='bg-caution';  // 형하 과대=저수심 위험
+    sub='저수심 위험 · 저수위경고선('+fmt(b.lowWarn,2)+'m) 초과 '+fmt(pass-b.lowWarn,2)+' m';}
   else{lbl='여유';scls='s-safe';bcls='bg-safe';}
   q('dot').className='dot '+bcls;
   q('lbl').className='st-lbl '+scls; q('lbl').textContent=lbl;
-  q('sub').textContent='운항금지선('+fmt(b.noGo,2)+'m)까지 '+fmt(pass-b.noGo,2)+' m';
+  q('sub').textContent=sub;
 }
 
 /* ----- 자동: HRFCO ----- */
@@ -713,6 +719,7 @@ function buildBridgeSettings(){
        '<div><label>오차보정(m)</label><input type="number" step="0.01" data-s="offset" data-i="'+i+'" value="'+(b.offset||0)+'"></div></div>'+
        '<div class="two"><div><label>운항금지선(m)</label><input type="number" step="0.1" data-s="noGo" data-i="'+i+'" value="'+b.noGo+'"></div>'+
        '<div><label>경고선(m·금지선 이하면 경고 없음)</label><input type="number" step="0.1" data-s="warn" data-i="'+i+'" value="'+b.warn+'"></div></div>'+
+       '<div class="two"><div><label>저수위경고선(m·통과높이 초과 시 저수심 경고, 비우면 없음)</label><input type="number" step="0.1" data-s="lowWarn" data-i="'+i+'" value="'+(b.lowWarn||'')+'"></div></div>'+
        '<label class="check"><input type="checkbox" data-s="verified" data-i="'+i+'" '+(b.verified?'checked':'')+'> 검증됨(임시값 표시 끄기)</label>'+
        '</div>';
   });
@@ -734,7 +741,7 @@ function saveSettings(){
   });
   store.set('hb_key',G.apiKey); store.set('hb_proxy',G.useProxy?'1':'0');
   store.set('hb_proxyurl',G.proxyUrl); store.set('hb_refresh',G.refreshMin);
-  store.set('hb_bridges5',JSON.stringify(bridges));
+  store.set('hb_bridges6',JSON.stringify(bridges));
   buildCards(); buildBridgeSettings(); setupTimer();
   if(G.mode==='auto')fetchAll();
   showMsg('설정을 저장했습니다.'); setTimeout(hideMsg,1600);
