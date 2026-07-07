@@ -99,12 +99,18 @@
 - 관련 코드: `DAM` 상수(코드 1017310, lagMin 240, winMin 30, noGoFlow 3000, warnFlow null),
   `damUrl()/fetchDam()/renderDam()/damLevel()/setDamStat()`. `fetchAll()`이 교량과 함께 호출.
 
-## 조류세기 (2026-07-06, 인천 카드 하단)
-- 인천 카드에서 일출/일몰 자리를 **조류세기 막대바(%)**로 교체(방법 A, 사용자 선택).
-- 계산: 오늘 조차(만조−간조 폭 cm)를 `TIDE_STR`(minRange 270·maxRange 930)로 0~100% 환산.
-  오늘 조차 707 → 66%(바다타임 근접). `renderTide` 끝에서 계산, `#tideCur/#tideCurFill/#tideCurPct`.
-- ⚠ **추정치**(실측 유속 아님). 맘에 안 들면 방법 B(KHOA 조류예보 API 신규 발급)로 전환 검토.
-- 출몰시각(일출/일몰/월출/월몰) 코드(`fetchRiseSet` 등)는 미사용으로 보존(호출 안 함).
+## 조류세기 (인천 카드 하단) — 2026-07-07 실측 전환
+- **KHOA 수치조류도 예측 유향·유속** API로 인천 지점의 **실시간 유속(cm/s)+방향+막대** 표시.
+  (초기 방법 A[조차 추정 %]는 폐기. 사용자 선택으로 실측 방법 B 채택.)
+- 엔드포인트: `https://khoa.go.kr/oceandata/api/tidalCurrentArea/search.do`
+  파라미터 `ServiceKey·Date(YYYYMMDD)·Hour·Minute·MinX/MaxX/MinY/MaxY(경위도 박스)·ResultType=json`.
+  응답 JSON `result.data[]`(격자점별 `current_speed`(cm/s)·`current_dir`(0=북)·`pre_lat/lon`).
+  **인천 지점(37.451,126.592) 최근접 격자값** 사용. CORS 허용(*), 하루 20,000건.
+- **키가 data.go.kr와 별개** — KHOA 바다누리(khoa.go.kr/oceandata) 자체 발급. `CONFIG.TIDECUR_KEY`,
+  유효 ~**2027-07-06**(현재 최단 만료 → `API_EXPIRY`에 등록). 사용기관 '개인'으로 발급.
+- 막대는 `TIDECUR.maxSpeed`(120cm/s)로 정규화, 방향 화살표는 유향으로 `rotate()`. 유속은 시간마다 변함
+  (정조 땐 ~0, 중간물때 땐 최고). `fetchTideCur()/renderTideCur()`, fetchAll·init에서 호출.
+- 출몰시각(`fetchRiseSet` 등) 코드는 미사용으로 보존(호출 안 함).
 
 ## 물때 카드: 여의도·인천 (2026-07-06 추가, v0.5.0)
 - **인천 물때 카드**(`#incheonCard`): 인천(DT_0001)의 오늘 만조·간조 4개 전부 표시(시각·조위 cm, 만조 강조).

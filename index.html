@@ -134,7 +134,9 @@
   .tcur .bar{flex:1;height:12px;border-radius:6px;background:rgba(255,255,255,.1);overflow:hidden;position:relative;top:5px}
   .tcur .fill{display:block;height:100%;border-radius:6px;width:0;
     background:linear-gradient(90deg,var(--water1),var(--caution));transition:width .8s cubic-bezier(.3,.7,.2,1)}
-  .tcur .pct{font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;min-width:40px;text-align:right;flex:none}
+  .tcur .pct{font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;min-width:70px;text-align:right;flex:none}
+  .tcur .pct b{color:var(--text);font-size:14px;font-weight:700}
+  .tcur .pct .arw{display:inline-block;color:var(--water1);margin-right:3px;font-size:13px;transition:transform .6s cubic-bezier(.3,.7,.2,1)}
 
   .msg{font-size:12.5px;color:var(--muted);background:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;line-height:1.5;display:none}
   .msg.show{display:block}.msg.err{color:#ffc9cb;border-color:rgba(239,77,84,.4)}
@@ -213,7 +215,7 @@
       <div class="tcur" id="tideCur" style="display:none">
         <span class="lbl">조류세기</span>
         <span class="bar"><span class="fill" id="tideCurFill"></span></span>
-        <span class="pct" id="tideCurPct">—</span>
+        <span class="pct"><span class="arw" id="tideCurDir">↑</span><b id="tideCurSpd">—</b> cm/s</span>
       </div>
     </div>
   </div>
@@ -320,14 +322,18 @@ var CONFIG = {
   TIDE_KEY: "fd9c1ad3f2f974ca1662b8e4a33403269603cc4c74a8c4f74371b8c781f714b4",
 
   // 출몰시각(일출·일몰·월출·월몰) — 한국천문연구원. 위 물때와 같은 data.go.kr 계정 키(TIDE_KEY) 사용. CORS 허용(*).
-  RISESET_ENDPOINT: "https://apis.data.go.kr/B090041/openapi/service/RiseSetInfoService/getAreaRiseSetInfo"
+  RISESET_ENDPOINT: "https://apis.data.go.kr/B090041/openapi/service/RiseSetInfoService/getAreaRiseSetInfo",
+
+  // 조류(수치조류도 예측 유향·유속) — KHOA 바다누리(khoa.go.kr/oceandata) 자체 키. data.go.kr와 별개 계정. CORS 허용(*).
+  TIDECUR_ENDPOINT: "https://khoa.go.kr/oceandata/api/tidalCurrentArea/search.do",
+  TIDECUR_KEY: "p9LEZ3khuH8P8QfSNnEywA=="
 };
 
 /* ===== API 키 유효기간 — 만료 전 배너로 미리 알림(data.go.kr는 2년, 연장 신청 필요) =====
    연장하면 아래 date만 새 만료일로 바꾸면 됨. */
 var API_EXPIRY=[
-  { name:"물때(조석예보)",        date:"2028-07-05" },
-  { name:"출몰시각(일출·월출 등)", date:"2028-07-06" }
+  { name:"물때(조석예보)",       date:"2028-07-05" },
+  { name:"조류세기(수치조류도)", date:"2027-07-06" }
 ];
 var EXPIRY_WARN_DAYS=60;  // 만료 N일 전부터 경고 배너 표시
 
@@ -487,6 +493,7 @@ function fetchAll(){
   bridges.forEach(function(b){ if(b.obscd) fetchBridge(b); });
   fetchDam();
   fetchTide();
+  fetchTideCur();
 }
 
 /* ----- 팔당댐 방류량 (HRFCO 댐 API, 수위와 같은 키 사용) ----- */
@@ -553,9 +560,8 @@ function renderDam(nowWin, pastWin){
 
 /* ----- 물때 (KHOA 조석예보 고저조, data.go.kr · CORS 허용, 브라우저 직접 호출) ----- */
 var TIDE={ incheon:"DT_0001", lagMin:240 };  // 여의도 만조 = 인천 만조 시각 +4시간(240분)
-// 조류세기(%) 추정: 오늘 조차(만조-간조 폭, cm)를 인천 기준 min~max로 0~100% 환산.
-// minRange/maxRange는 오늘 조차(707)가 바다타임 66%에 근접하도록 보정한 인천 근사값.
-var TIDE_STR={ minRange:270, maxRange:930 };
+// 조류세기: KHOA 수치조류도 예측 유속(cm/s)·유향. 인천 지점 최근접 격자값을 실시간 표시.
+var TIDECUR={ lat:37.451, lon:126.592, maxSpeed:120 };  // 인천 지점, 막대 정규화용 최대 유속(cm/s, 사리 강조류 근사)
 function fetchTide(){
   if(!CONFIG.TIDE_KEY || !CONFIG.TIDE_ENDPOINT) return;
   // date는 무시되고 항상 서버 기준 오늘(KST) — obsCode만 있으면 됨. 응답은 XML.
@@ -618,11 +624,35 @@ function renderTide(list){
   var dstr=ymd?(ymd.slice(5,7)+'/'+ymd.slice(8,10)+' 예보'):'';
   if($('incheonT'))$('incheonT').textContent=dstr;
   if($('yeouidoT'))$('yeouidoT').textContent=dstr;
-  // 조류세기(%): 오늘 조차(최고−최저)를 인천 기준으로 정규화한 추정치
-  var vals=sorted.map(function(e){return e.val;});
-  var range=Math.max.apply(null,vals)-Math.min.apply(null,vals);
-  var pct=Math.round(Math.max(0,Math.min(100,(range-TIDE_STR.minRange)/(TIDE_STR.maxRange-TIDE_STR.minRange)*100)));
-  if($('tideCur')){ $('tideCurFill').style.width=pct+'%'; $('tideCurPct').textContent=pct+'%'; $('tideCur').style.display='flex'; }
+}
+/* ----- 조류세기: KHOA 수치조류도 예측 유향·유속 (실측 예측, 인천 지점) ----- */
+function fetchTideCur(){
+  if(!CONFIG.TIDECUR_KEY || !CONFIG.TIDECUR_ENDPOINT) return;
+  var d=new Date(Date.now()+9*3600000), p=function(n){return(n<10?'0':'')+n;};  // KST 현재 분까지
+  var url=CONFIG.TIDECUR_ENDPOINT+'?ServiceKey='+CONFIG.TIDECUR_KEY+
+    '&Date='+d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+
+    '&Hour='+p(d.getUTCHours())+'&Minute='+p(d.getUTCMinutes())+
+    '&MinX=126.52&MaxX=126.66&MinY=37.40&MaxY=37.50&ResultType=json';
+  fetch(url,{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+   .then(function(j){
+     var rows=(j&&j.result&&j.result.data)?j.result.data:[], best=null;
+     for(var i=0;i<rows.length;i++){
+       var la=parseFloat(rows[i].pre_lat), lo=parseFloat(rows[i].pre_lon), s=parseFloat(rows[i].current_speed);
+       if(isNaN(la)||isNaN(lo)||isNaN(s))continue;
+       var dd=(la-TIDECUR.lat)*(la-TIDECUR.lat)+(lo-TIDECUR.lon)*(lo-TIDECUR.lon);  // 인천 최근접 격자점
+       if(!best||dd<best.dd) best={dd:dd, spd:s, dir:parseFloat(rows[i].current_dir)};
+     }
+     if(!best)throw new Error('값 없음');
+     renderTideCur(best.spd, best.dir);
+   })
+   .catch(function(e){ var el=$('tideCur'); if(el) el.style.display='none'; });
+}
+function renderTideCur(spd, dir){
+  var pct=Math.max(2, Math.min(100, spd/TIDECUR.maxSpeed*100));  // 최소 2%는 보이게
+  $('tideCurFill').style.width=pct+'%';
+  $('tideCurSpd').textContent=Math.round(spd);
+  var arw=$('tideCurDir'); if(arw&&!isNaN(dir)) arw.style.transform='rotate('+dir+'deg)';  // 유향(0=북)
+  $('tideCur').style.display='flex';
 }
 
 /* ----- 출몰시각: 일출·일몰·월출·월몰 (한국천문연구원, data.go.kr)
@@ -748,7 +778,7 @@ applyModeUI();
 applyAdmin();
 applyScene();
 checkKeyExpiry();
-if(G.mode==='auto')fetchAll(); else fetchTide();  // 물때는 예보값이라 수동 모드에서도 표시
+if(G.mode==='auto')fetchAll(); else { fetchTide(); fetchTideCur(); }  // 물때·조류는 예보값이라 수동 모드에서도 표시
 setupTimer();
 </script>
 </body>
