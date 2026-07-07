@@ -134,7 +134,7 @@
   .tcur .bar{flex:1;height:12px;border-radius:6px;background:rgba(255,255,255,.1);overflow:hidden;position:relative;top:5px}
   .tcur .fill{display:block;height:100%;border-radius:6px;width:0;
     background:linear-gradient(90deg,var(--water1),var(--caution));transition:width .8s cubic-bezier(.3,.7,.2,1)}
-  .tcur .pct{font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;min-width:70px;text-align:right;flex:none}
+  .tcur .pct{font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;min-width:52px;text-align:right;flex:none}
   .tcur .pct b{color:var(--text);font-size:14px;font-weight:700}
   .tcur .pct .arw{display:inline-block;color:var(--water1);margin-right:3px;font-size:13px;transition:transform .6s cubic-bezier(.3,.7,.2,1)}
 
@@ -215,7 +215,7 @@
       <div class="tcur" id="tideCur" style="display:none">
         <span class="lbl">조류세기</span>
         <span class="bar"><span class="fill" id="tideCurFill"></span></span>
-        <span class="pct"><span class="arw" id="tideCurDir">↑</span><b id="tideCurSpd">—</b> cm/s</span>
+        <span class="pct"><span class="arw" id="tideCurDir">↑</span><b id="tideCurSpd">—</b>%</span>
       </div>
     </div>
   </div>
@@ -648,9 +648,9 @@ function fetchTideCur(){
    .catch(function(e){ var el=$('tideCur'); if(el) el.style.display='none'; });
 }
 function renderTideCur(spd, dir){
-  var pct=Math.max(2, Math.min(100, spd/TIDECUR.maxSpeed*100));  // 최소 2%는 보이게
-  $('tideCurFill').style.width=pct+'%';
-  $('tideCurSpd').textContent=Math.round(spd);
+  var raw=Math.max(0, Math.min(100, spd/TIDECUR.maxSpeed*100));  // 유속÷최대유속 = 조류세기 %
+  $('tideCurFill').style.width=Math.max(2,raw)+'%';  // 막대는 최소 2%는 보이게
+  $('tideCurSpd').textContent=Math.round(raw);        // 표시는 %(막대 채움과 동일)
   var arw=$('tideCurDir'); if(arw&&!isNaN(dir)) arw.style.transform='rotate('+dir+'deg)';  // 유향(0=북)
   $('tideCur').style.display='flex';
 }
