@@ -99,17 +99,18 @@
 - 관련 코드: `DAM` 상수(코드 1017310, lagMin 240, winMin 30, noGoFlow 3000, warnFlow null),
   `damUrl()/fetchDam()/renderDam()/damLevel()/setDamStat()`. `fetchAll()`이 교량과 함께 호출.
 
-## 조류세기 (인천 카드 하단) — 2026-07-07 실측 전환
-- **KHOA 수치조류도 예측 유향·유속** API로 인천 지점의 **실시간 유속(cm/s)+방향+막대** 표시.
-  (초기 방법 A[조차 추정 %]는 폐기. 사용자 선택으로 실측 방법 B 채택.)
+## 조류세기 (인천 카드 하단) — 2026-07-07 KHOA 실측, '오늘 하루 세기'
+- **KHOA 수치조류도 예측 유향·유속** API로 계산. 표시는 **바다타임식 '오늘 하루 세기 %'**(하루 고정,
+  방향 화살표 없음, 깔끔한 %). 예: 오늘 59%(바다타임 일치). (조차 추정[방법 A]·실시간 유속 방식은 폐기.)
+- 계산: 하루 여러 시각(`TIDECUR.hours`=0,3,…,21)의 인천 최근접 격자 유속 중 **최고값** = 오늘 하루 세기.
+  이를 `TIDECUR.maxSpeed`(125cm/s, 오늘 최고 74→59% 보정)로 나눠 %. **하루 1번 계산 후 `hb_tidecur`
+  (localStorage, {ymd,pct})에 캐시** → 이후 재조회 없음(호출 절약). `pickIncheonSpeed()/fetchTideCur()/renderTideCur()`.
+- 왜 하루 세기? 실시간 유속은 정조(물멈춤) 땐 ~0이라 바다타임(하루 고정 59%)과 극단적으로 달라 혼란 → 사용자 선택.
 - 엔드포인트: `https://khoa.go.kr/oceandata/api/tidalCurrentArea/search.do`
   파라미터 `ServiceKey·Date(YYYYMMDD)·Hour·Minute·MinX/MaxX/MinY/MaxY(경위도 박스)·ResultType=json`.
-  응답 JSON `result.data[]`(격자점별 `current_speed`(cm/s)·`current_dir`(0=북)·`pre_lat/lon`).
-  **인천 지점(37.451,126.592) 최근접 격자값** 사용. CORS 허용(*), 하루 20,000건.
+  응답 JSON `result.data[]`(격자점 `current_speed` cm/s·`current_dir`·`pre_lat/lon`). CORS 허용(*), 하루 20,000건.
 - **키가 data.go.kr와 별개** — KHOA 바다누리(khoa.go.kr/oceandata) 자체 발급. `CONFIG.TIDECUR_KEY`,
-  유효 ~**2027-07-06**(현재 최단 만료 → `API_EXPIRY`에 등록). 사용기관 '개인'으로 발급.
-- 막대는 `TIDECUR.maxSpeed`(120cm/s)로 정규화, 방향 화살표는 유향으로 `rotate()`. 유속은 시간마다 변함
-  (정조 땐 ~0, 중간물때 땐 최고). `fetchTideCur()/renderTideCur()`, fetchAll·init에서 호출.
+  유효 ~**2027-07-06**(현재 최단 만료 → `API_EXPIRY`에 등록). 사용기관 '개인'.
 - 출몰시각(`fetchRiseSet` 등) 코드는 미사용으로 보존(호출 안 함).
 
 ## 물때 카드: 여의도·인천 (2026-07-06 추가, v0.5.0)

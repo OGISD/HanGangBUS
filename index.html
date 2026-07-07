@@ -134,9 +134,8 @@
   .tcur .bar{flex:1;height:12px;border-radius:6px;background:rgba(255,255,255,.1);overflow:hidden;position:relative;top:5px}
   .tcur .fill{display:block;height:100%;border-radius:6px;width:0;
     background:linear-gradient(90deg,var(--water1),var(--caution));transition:width .8s cubic-bezier(.3,.7,.2,1)}
-  .tcur .pct{font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;min-width:52px;text-align:right;flex:none}
+  .tcur .pct{font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;min-width:42px;text-align:right;flex:none}
   .tcur .pct b{color:var(--text);font-size:14px;font-weight:700}
-  .tcur .pct .arw{display:inline-block;color:var(--water1);margin-right:3px;font-size:13px;transition:transform .6s cubic-bezier(.3,.7,.2,1)}
 
   .msg{font-size:12.5px;color:var(--muted);background:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px;line-height:1.5;display:none}
   .msg.show{display:block}.msg.err{color:#ffc9cb;border-color:rgba(239,77,84,.4)}
@@ -215,7 +214,7 @@
       <div class="tcur" id="tideCur" style="display:none">
         <span class="lbl">조류세기</span>
         <span class="bar"><span class="fill" id="tideCurFill"></span></span>
-        <span class="pct"><span class="arw" id="tideCurDir">↑</span><b id="tideCurSpd">—</b>%</span>
+        <span class="pct"><b id="tideCurSpd">—</b>%</span>
       </div>
     </div>
   </div>
@@ -561,7 +560,9 @@ function renderDam(nowWin, pastWin){
 /* ----- 물때 (KHOA 조석예보 고저조, data.go.kr · CORS 허용, 브라우저 직접 호출) ----- */
 var TIDE={ incheon:"DT_0001", lagMin:240 };  // 여의도 만조 = 인천 만조 시각 +4시간(240분)
 // 조류세기: KHOA 수치조류도 예측 유속(cm/s)·유향. 인천 지점 최근접 격자값을 실시간 표시.
-var TIDECUR={ lat:37.451, lon:126.592, maxSpeed:120 };  // 인천 지점, 막대 정규화용 최대 유속(cm/s, 사리 강조류 근사)
+// 조류세기 = '오늘 하루 세기'(바다타임식): 하루 여러 시각 중 인천 최고 유속을 maxSpeed 대비 %로.
+// maxSpeed 125는 오늘(최고 74cm/s)이 59%가 되도록 보정한 값(사리~조금에 따라 %가 오르내림).
+var TIDECUR={ lat:37.451, lon:126.592, maxSpeed:125, hours:[0,3,6,9,12,15,18,21] };
 function fetchTide(){
   if(!CONFIG.TIDE_KEY || !CONFIG.TIDE_ENDPOINT) return;
   // date는 무시되고 항상 서버 기준 오늘(KST) — obsCode만 있으면 됨. 응답은 XML.
@@ -626,32 +627,42 @@ function renderTide(list){
   if($('yeouidoT'))$('yeouidoT').textContent=dstr;
 }
 /* ----- 조류세기: KHOA 수치조류도 예측 유향·유속 (실측 예측, 인천 지점) ----- */
+// 인천 최근접 격자점의 유속(cm/s) 추출
+function pickIncheonSpeed(j){
+  var rows=(j&&j.result&&j.result.data)?j.result.data:[], best=null;
+  for(var i=0;i<rows.length;i++){
+    var la=parseFloat(rows[i].pre_lat), lo=parseFloat(rows[i].pre_lon), s=parseFloat(rows[i].current_speed);
+    if(isNaN(la)||isNaN(lo)||isNaN(s))continue;
+    var dd=(la-TIDECUR.lat)*(la-TIDECUR.lat)+(lo-TIDECUR.lon)*(lo-TIDECUR.lon);
+    if(!best||dd<best.dd) best={dd:dd, s:s};
+  }
+  return best?best.s:null;
+}
 function fetchTideCur(){
   if(!CONFIG.TIDECUR_KEY || !CONFIG.TIDECUR_ENDPOINT) return;
-  var d=new Date(Date.now()+9*3600000), p=function(n){return(n<10?'0':'')+n;};  // KST 현재 분까지
-  var url=CONFIG.TIDECUR_ENDPOINT+'?ServiceKey='+CONFIG.TIDECUR_KEY+
-    '&Date='+d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+
-    '&Hour='+p(d.getUTCHours())+'&Minute='+p(d.getUTCMinutes())+
-    '&MinX=126.52&MaxX=126.66&MinY=37.40&MaxY=37.50&ResultType=json';
-  fetch(url,{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
-   .then(function(j){
-     var rows=(j&&j.result&&j.result.data)?j.result.data:[], best=null;
-     for(var i=0;i<rows.length;i++){
-       var la=parseFloat(rows[i].pre_lat), lo=parseFloat(rows[i].pre_lon), s=parseFloat(rows[i].current_speed);
-       if(isNaN(la)||isNaN(lo)||isNaN(s))continue;
-       var dd=(la-TIDECUR.lat)*(la-TIDECUR.lat)+(lo-TIDECUR.lon)*(lo-TIDECUR.lon);  // 인천 최근접 격자점
-       if(!best||dd<best.dd) best={dd:dd, spd:s, dir:parseFloat(rows[i].current_dir)};
-     }
-     if(!best)throw new Error('값 없음');
-     renderTideCur(best.spd, best.dir);
-   })
-   .catch(function(e){ var el=$('tideCur'); if(el) el.style.display='none'; });
+  var d=new Date(Date.now()+9*3600000), p=function(n){return(n<10?'0':'')+n;};  // KST 오늘
+  var ymd=''+d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate());
+  // 오늘치 캐시 있으면 재조회 없이 사용(하루 1번만 계산)
+  try{ var c=JSON.parse(store.get('hb_tidecur','')); if(c&&c.ymd===ymd&&c.pct!=null){ renderTideCur(c.pct); return; } }catch(e){}
+  // 하루 여러 시각의 예측 유속 중 최고 = '오늘 하루 세기'
+  var hrs=TIDECUR.hours, done=0, peak=0;
+  hrs.forEach(function(h){
+    var url=CONFIG.TIDECUR_ENDPOINT+'?ServiceKey='+CONFIG.TIDECUR_KEY+'&Date='+ymd+'&Hour='+p(h)+
+      '&Minute=00&MinX=126.55&MaxX=126.63&MinY=37.42&MaxY=37.48&ResultType=json';
+    fetch(url,{cache:'no-store'}).then(function(r){return r.ok?r.json():null;})
+     .then(function(j){ var s=pickIncheonSpeed(j); if(s!=null&&s>peak) peak=s; })
+     .catch(function(){})
+     .then(function(){ if(++done===hrs.length){
+       if(peak<=0){ var el=$('tideCur'); if(el) el.style.display='none'; return; }
+       var pct=Math.round(Math.max(0,Math.min(100, peak/TIDECUR.maxSpeed*100)));
+       try{ store.set('hb_tidecur', JSON.stringify({ymd:ymd, pct:pct})); }catch(e){}
+       renderTideCur(pct);
+     }});
+  });
 }
-function renderTideCur(spd, dir){
-  var raw=Math.max(0, Math.min(100, spd/TIDECUR.maxSpeed*100));  // 유속÷최대유속 = 조류세기 %
-  $('tideCurFill').style.width=Math.max(2,raw)+'%';  // 막대는 최소 2%는 보이게
-  $('tideCurSpd').textContent=Math.round(raw);        // 표시는 %(막대 채움과 동일)
-  var arw=$('tideCurDir'); if(arw&&!isNaN(dir)) arw.style.transform='rotate('+dir+'deg)';  // 유향(0=북)
+function renderTideCur(pct){
+  $('tideCurFill').style.width=Math.max(2,pct)+'%';  // 막대는 최소 2%는 보이게
+  $('tideCurSpd').textContent=pct;                    // 하루 세기 %(막대 채움과 동일)
   $('tideCur').style.display='flex';
 }
 
