@@ -138,6 +138,16 @@
   moonrise/moonset(HHMM, 공백 trim, 없으면 '—'). `RISESET`/`fetchRiseSet()/hhmm()`. fetchAll·init에서 호출.
   위치는 인천(같은 카드 데이터와 일관). 서울과 1분 이내 차이.
 
+## 한강 역류 감시 카드 (2026-07-08, 행주대교 카드 밑)
+- `#backflowCard`(정적 카드) — **행주대교 수위 최근 30분(10분 단위 3개)**, 팔당댐 서식(`.drows/.drow`, 최신 강조,
+  신선도 `#bfT`). HRFCO 행주대교(1019630) 기간조회. `BACKFLOW` 상수/`backflowUrl()/fetchBackflow()/renderBackflow()`.
+  `fetchAll`에서 호출(자동 모드), 수동 모드는 안내(`applyModeUI`의 `#bfNote`).
+- 배치: `#cards` 안 정적 HTML(인천 카드 뒤)로 두되 `buildCards()`가 **행주대교 카드 바로 아래로 이동**(insertAdjacentElement afterend).
+- **역류 원리**: 인천 조위가 신곡수중보(≈720cm)를 넘으면 밀물이 한강 상류로 역류. 신곡수중보 지점 수위는
+  아라한강갑문(내) 1019635로도 조회 가능(김포 고촌 신곡리, 실시간).
+- **역류 자동 판정 미구현(대기)**: 인천 조위 720cm 기준으로 판정 예정이나, 실제 720 초과일 때 검증 후 도입.
+  행주 절대수위 고정 임계값은 팔당댐 방류량에 따라 기준선이 변해 불안정(2026-07-08 분석) → 인천 조위(고저조 코사인 보간) 기준이 안정적.
+
 ## 파일 구조
 - `index.html` — 웹앱 전체(단일 파일). 실제 배포물.
 - `hrfco-proxy-worker.js` — (사용 안 함) 폐기된 Cloudflare Worker. 삭제해도 무방.

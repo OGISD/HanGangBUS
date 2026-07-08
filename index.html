@@ -224,6 +224,11 @@
         <span class="pct"><b id="tideCurSpd">—</b>%</span>
       </div>
     </div>
+    <div class="card" id="backflowCard">
+      <div class="chead"><span class="nm">행주대교 수위</span><span class="t" id="bfT">—</span></div>
+      <div class="drows" id="bfRows"><div class="drow"><span class="tm">—</span><span class="v">—</span></div></div>
+      <div class="dnote" id="bfNote">※ 한강 역류 판정을 위해 넣은 정보이며 개선 중입니다.</div>
+    </div>
   </div>
 
   <details id="setPanel" style="display:none">
@@ -437,6 +442,9 @@ function buildCards(){
     apply.onclick=function(){var v=parseFloat(wl.value); if(isNaN(v)){showMsg('수위를 숫자로 입력해 주세요.',true);return;} hideMsg(); renderBridge(b, v, nowStr());};
     wl.addEventListener('keyup',function(e){if(e.key==='Enter')apply.click();});
   });
+  // 역류 감시 카드를 행주대교 카드 바로 아래로 이동
+  var hj=c.querySelector('.card[data-id="haengju"]'), bf=$('backflowCard');
+  if(hj&&bf) hj.insertAdjacentElement('afterend', bf);
   applyModeUI();
   // 초기 표시
   bridges.forEach(function(b){ var v=parseFloat(b.sampleWl); if(!isNaN(v)) renderBridge(b, v, nowStr()); });
@@ -508,6 +516,7 @@ function fetchAll(){
   fetchDam();
   fetchTide();
   fetchTideCur();
+  fetchBackflow();
 }
 
 /* ----- 팔당댐 방류량 (HRFCO 댐 API, 수위와 같은 키 사용) ----- */
@@ -570,6 +579,39 @@ function renderDam(nowWin, pastWin){
       if(age>=STALE_MIN){ tEl.className='t stale'; label+=' ⚠'; } else tEl.className='t'; }
     tEl.textContent=label;
   }
+}
+
+/* ----- 한강 역류 감시: 행주대교 수위 최근 30분 (팔당댐 서식) ----- */
+var BACKFLOW={ code:"1019630", winMin:30 };  // 행주대교 수위관측소
+function backflowUrl(){
+  var now=new Date(Date.now()+9*3600000);  // KST 10분 정각
+  now.setUTCMinutes(Math.floor(now.getUTCMinutes()/10)*10,0,0);
+  var f=function(d){var p=function(n){return(n<10?'0':'')+n;};
+    return ''+d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+p(d.getUTCHours())+p(d.getUTCMinutes());};
+  var sdt=new Date(now.getTime()-(BACKFLOW.winMin+10)*60000);
+  var t='https://api.hrfco.go.kr/'+encodeURIComponent(G.apiKey)+'/waterlevel/list/10M/'+BACKFLOW.code+'/'+f(sdt)+'/'+f(now)+'.json';
+  return G.useProxy ? G.proxyUrl+encodeURIComponent(t) : t;
+}
+function fetchBackflow(){
+  if(!G.apiKey) return;
+  fetch(backflowUrl(),{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})
+   .then(function(t){var j;try{j=JSON.parse(t);}catch(e){throw new Error('형식 오류');}
+     var a=(j&&j.content)?j.content:[], rows=[];
+     for(var i=0;i<a.length;i++){var w=parseFloat(a[i].wl); if(!isNaN(w)) rows.push({ymdhm:a[i].ymdhm,wl:w});}
+     if(!rows.length) throw new Error('값 없음');
+     rows.sort(function(x,y){return x.ymdhm<y.ymdhm?1:-1;});  // 최신순
+     renderBackflow(rows.slice(0,3));})
+   .catch(function(e){ var el=$('bfT'); if(el){el.className='t'; el.textContent='호출 실패';} });
+}
+function renderBackflow(win){
+  var a=win.slice().reverse(), h='';  // 과거→최신, 최신 강조
+  for(var i=0;i<a.length;i++)
+    h+='<div class="drow'+(i===a.length-1?' latest':'')+'"><span class="tm">'+ymdhmToStr(a[i].ymdhm)+'</span><span class="v">'+fmt(a[i].wl,2)+' m</span></div>';
+  $('bfRows').innerHTML=h;
+  var tEl=$('bfT'), latest=win[0]?win[0].ymdhm:null;
+  if(latest){ var label='갱신 '+ymdhmToStr(latest), age=ymdhmAgeMin(latest);
+    if(age!=null){ label+=' · '+ageStr(age); if(age>=STALE_MIN){tEl.className='t stale';label+=' ⚠';} else tEl.className='t'; }
+    tEl.textContent=label; }
 }
 
 /* ----- 물때 (KHOA 조석예보 고저조, data.go.kr · CORS 허용, 브라우저 직접 호출) ----- */
@@ -714,6 +756,10 @@ function applyModeUI(){
   if(dn) dn.textContent = G.mode==='manual'
     ? '방류량은 자동 모드에서만 조회됩니다. 위의 "자동"으로 전환하면 표시됩니다.'
     : '4시간 전 방류량이 지금 여의도 부근에 도달하는 중입니다.';
+  var bn=$('bfNote');
+  if(bn) bn.textContent = G.mode==='manual'
+    ? '행주대교 수위는 자동 모드에서만 조회됩니다.'
+    : '※ 한강 역류 판정을 위해 넣은 정보이며 개선 중입니다.';
 }
 function setMode(m){G.mode=m;store.set('hb_mode',m);applyModeUI();setupTimer();if(m==='auto')fetchAll();}
 
