@@ -162,6 +162,13 @@
   hr{border:0;border-top:1px solid var(--line);margin:16px 0 0}
   footer{color:var(--muted);font-size:11px;line-height:1.6;text-align:center;margin-top:6px}
   footer code{color:#bcd2e6}
+  /* 이스터에그: 30초 후 도움 주신 분들 성함이 전광판처럼 흐름 */
+  .marquee{display:none;overflow:hidden;white-space:nowrap;margin-top:12px;padding-top:11px;border-top:1px solid var(--line)}
+  .marquee.on{display:block}
+  .marquee span{display:inline-block;padding-left:100%;font-size:16px;font-weight:800;
+    letter-spacing:.01em;color:#bcd2e6;animation:marq 24s linear infinite}
+  .marquee b{color:#ffd9a3}
+  @keyframes marq{0%{transform:translateX(0)}100%{transform:translateX(-100%)}}
 </style>
 </head>
 <body>
@@ -302,7 +309,9 @@
     </div>
   </details>
 
-  <footer id="footNote"><!-- 안내 문구 자리 (추후 문구 삽입용) --></footer>
+  <footer id="footNote">
+    <div class="marquee" id="credits"><span>⚓ 이 앱을 함께 만들어 주신 분들 &nbsp; <b>노성호 선장님</b> (자문, 실측) &nbsp;·&nbsp; <b>최용원 선장님</b> (자료조사) &nbsp;·&nbsp; <b>홍영진 기관장님</b> (실측) &nbsp;·&nbsp; <b>강기종 항해사님</b> (실측) &nbsp;·&nbsp; 고맙습니다 🙏 &nbsp;&nbsp;&nbsp;</span></div>
+  </footer>
 </div>
 
 <script>
@@ -798,6 +807,8 @@ applyScene();
 checkKeyExpiry();
 if(G.mode==='auto')fetchAll(); else { fetchTide(); fetchTideCur(); }  // 물때·조류는 예보값이라 수동 모드에서도 표시
 setupTimer();
+// 이스터에그: 30초 이상 머물면 하단 크레딧이 전광판처럼 흐르기 시작(오른쪽→왼쪽)
+setTimeout(function(){ var el=$('credits'); if(el) el.className='marquee on'; }, 30000);
 </script>
 </body>
 </html>
