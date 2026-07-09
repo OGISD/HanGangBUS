@@ -1,0 +1,14 @@
+{
+  "name": "한강버스 운항 도우미",
+  "short_name": "한강버스",
+  "description": "한강 교량 통과높이 · 팔당댐 방류 · 물때 · 조류 실시간 참고용",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#07141f",
+  "theme_color": "#07141f",
+  "icons": [
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
