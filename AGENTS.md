@@ -1,10 +1,10 @@
-# CLAUDE.md — 한강 교량 통과높이 모니터
+# AGENTS.md — 한강 교량 통과높이 모니터
 
-이 파일은 Claude Code가 이 프로젝트의 맥락을 이어받기 위한 메모입니다.
+이 파일은 Codex가 이 프로젝트의 맥락을 이어받기 위한 메모입니다.
 (설명·문서는 한국어로 작성합니다.)
 
 ## ⚙️ 작업 규칙 (항상 지킬 것)
-- **작업을 완료할 때마다 이 CLAUDE.md를 확인하고 그때그때 갱신한다.** 바뀐 배포 상태·확정값·
+- **작업을 완료할 때마다 이 AGENTS.md를 확인하고 그때그때 갱신한다.** 바뀐 배포 상태·확정값·
   아키텍처 결정·"다음 할 일" 체크박스를 최신으로 유지. (예전 설명이 틀려졌으면 고치고, 끝낸
   할 일은 `[x]`로 표시·완료일 기록.) 문서 갱신도 같은 커밋/푸시에 포함한다.
 
@@ -22,7 +22,7 @@
   (예전 "웹에서 전체 복붙" 방식은 더 이상 안 씀.)
   - 인증: Git Credential Manager(system helper `manager`)가 처리. push 시 필요하면 로그인 창이 뜸.
   - 커밋 신원: user.name=OGISD, user.email=buwake58@naver.com (global).
-  - 줄바꿈은 `.gitattributes`로 LF 정규화. `hangang-bridge-monitor.zip`·`.claude/`는 `.gitignore`.
+  - 줄바꿈은 `.gitattributes`로 LF 정규화. `hangang-bridge-monitor.zip`·`.Codex/`는 `.gitignore`.
 - 자동 모드 실시간 작동 검증 완료(2026-06 기준).
 
 ## 핵심 공식
@@ -100,9 +100,6 @@
   - `DAM.warnFlow`(주의선)는 **null 상태 — 회사 2번째 절대값 확인 대기(2026-07-06 예정)**.
     숫자를 넣으면 주황 '주의' 단계가 자동 활성(교량 noGo/warn 2단계와 동일 구조). `damLevel()`/`setDamStat()` 참고.
 - 신선도 경고는 교량 카드와 동일 로직(`STALE_MIN` 공유). 수동 모드에서는 조회 안 함(안내 문구).
-- **과거 4시간 펼치기**(2026-07-08): 카드 안 `<details class="hist">`("과거 4시간 기록") 펼치면 10분 단위
-  전체(~25개)가 스크롤(`.drows.scroll`) 목록으로. 팔당댐은 이미 4h40m치를 받으므로 `renderDam`이 `rows`를
-  `#damFullRows`에 그림(표시만 추가, 새 호출 없음). 공통 헬퍼 `histRows()/within4h()`(최신 기준 240분 이내).
 - 관련 코드: `DAM` 상수(코드 1017310, lagMin 240, winMin 30, noGoFlow 3000, warnFlow null),
   `damUrl()/fetchDam()/renderDam()/damLevel()/setDamStat()`. `fetchAll()`이 교량과 함께 호출.
 
@@ -142,9 +139,8 @@
   위치는 인천(같은 카드 데이터와 일관). 서울과 1분 이내 차이.
 
 ## 한강 역류 감시 카드 (2026-07-08, 행주대교 카드 밑)
-- `#backflowCard`(정적 카드) — **행주대교 수위 최근 30분(10분 단위 3개)** 요약, 팔당댐 서식(`.drows/.drow`, 최신 강조,
-  신선도 `#bfT`). HRFCO 행주대교(1019630) 기간조회. `BACKFLOW`(winMin 240=4시간 조회, 요약은 최신 3개)/`backflowUrl()/fetchBackflow()/renderBackflow()`.
-  카드 안 "과거 4시간 기록" 펼치면 4시간 전체가 `#bfFullRows`에 스크롤 목록으로(공통 `histRows()`).
+- `#backflowCard`(정적 카드) — **행주대교 수위 최근 30분(10분 단위 3개)**, 팔당댐 서식(`.drows/.drow`, 최신 강조,
+  신선도 `#bfT`). HRFCO 행주대교(1019630) 기간조회. `BACKFLOW` 상수/`backflowUrl()/fetchBackflow()/renderBackflow()`.
   `fetchAll`에서 호출(자동 모드), 수동 모드는 안내(`applyModeUI`의 `#bfNote`).
 - 배치: `#cards` 안 정적 HTML(인천 카드 뒤)로 두되 `buildCards()`가 **행주대교 카드 바로 아래로 이동**(insertAdjacentElement afterend).
 - **역류 원리**: 인천 조위가 신곡수중보(≈720cm)를 넘으면 밀물이 한강 상류로 역류. 신곡수중보 지점 수위는
@@ -157,7 +153,7 @@
 - `hrfco-proxy-worker.js` — (사용 안 함) 폐기된 Cloudflare Worker. 삭제해도 무방.
 - **AI Development OS 문서** (2026-07-04 적용): `PRD.md`(요구사항) · `TASKS.md`(작업 추적) ·
   `RULES.md`(작업 규칙·원격 저장소 규칙) · `AI_HANDOFF.md`(세션 인수인계) · `CHANGELOG.md`(변경 이력).
-  새 세션은 AI_HANDOFF.md부터 읽기. 작업 완료 시 이 문서들도 CLAUDE.md와 함께 갱신.
+  새 세션은 AI_HANDOFF.md부터 읽기. 작업 완료 시 이 문서들도 AGENTS.md와 함께 갱신.
 
 ## index.html 의 CONFIG
 ```js
@@ -179,7 +175,7 @@ var CONFIG = {
 
 ## 로컬 미리보기(개발용)
 - 정적 파일이라 폴더를 그대로 서빙: `python -m http.server 8137` → http://localhost:8137/
-- `.claude/launch.json` 에 미리보기 설정 있음(preview 도구용).
+- `.Codex/launch.json` 에 미리보기 설정 있음(preview 도구용).
 - preview 도구는 dev 서버(localhost) 오리진에 묶여 있어 외부 github.io 화면 캡처는 안 됨.
 
 ## 다음 할 일 후보 (상세·최신은 TASKS.md 참고)

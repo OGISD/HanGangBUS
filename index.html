@@ -116,6 +116,13 @@
   .drow .v{font-size:14px;font-weight:700}
   .drow.latest{background:rgba(255,255,255,.06)}
   .drow.latest .v{font-size:15px}
+  /* 카드 안 '과거 4시간 펼치기' 접이식 */
+  .hist{background:none;border:0;border-top:1px solid var(--line);border-radius:0;margin:9px 0 0;padding-top:9px}
+  .hist summary{padding:2px 0;font-size:11.5px;font-weight:600;color:var(--muted)}
+  .hist summary::after{content:"▾"}
+  .hist[open] summary::after{content:"▴"}
+  .drows.scroll{max-height:190px;overflow-y:auto;margin-top:8px;padding-right:2px}
+  .drows.scroll .tm{font-size:12px}
   .ddiv{width:1px;background:var(--line);flex:none;margin:4px 0}
   .dstat{margin-top:8px;text-align:center;font-size:11px;font-weight:700;min-height:16px}
   .dstat.nogo{color:var(--danger)}
@@ -213,6 +220,7 @@
         <div class="dstat" id="damNowStat"></div>
       </div>
     </div>
+    <details class="hist"><summary>과거 4시간 기록</summary><div class="drows scroll" id="damFullRows"></div></details>
     <div class="dnote" id="damNote">4시간 전 방류량이 지금 여의도 부근에 도달하는 중입니다.</div>
   </div>
 
@@ -234,6 +242,7 @@
     <div class="card" id="backflowCard">
       <div class="chead"><span class="nm">행주대교 수위</span><span class="t" id="bfT">—</span></div>
       <div class="drows" id="bfRows"><div class="drow"><span class="tm">—</span><span class="v">—</span></div></div>
+      <details class="hist"><summary>과거 4시간 기록</summary><div class="drows scroll" id="bfFullRows"></div></details>
       <div class="dnote" id="bfNote">※ 한강 역류 판정을 위해 넣은 정보이며 개선 중입니다.</div>
     </div>
   </div>
@@ -562,11 +571,23 @@ function fetchDam(){
      // "4시간 전" 창은 벽시계가 아니라 최신 관측시각 기준 240분 전 — 두 창의 간격이 정확히 4시간이 됨
      var cutMs=ymdhmToMs(rows[0].ymdhm)-DAM.lagMin*60000, past=[];
      for(i=0;i<rows.length;i++){ if(ymdhmToMs(rows[i].ymdhm)<=cutMs){ past=rows.slice(i,i+3); break; } }
-     renderDam(nowWin, past);})
+     renderDam(nowWin, past, rows);})
    .catch(function(e){ var el=$('damT'); if(el){el.className='t'; el.textContent='호출 실패';}
      showMsg('팔당댐 방류량 호출 실패: '+e.message+'. 새로고침으로 재시도할 수 있습니다.', true); });
 }
-function renderDam(nowWin, pastWin){
+// 과거 4시간 전체 목록 HTML (list: 최신순 {ymdhm,val} → 과거→현재, 최신 강조)
+function histRows(list, unit, dec){
+  var a=list.slice().reverse(), h='';
+  for(var i=0;i<a.length;i++)
+    h+='<div class="drow'+(i===a.length-1?' latest':'')+'"><span class="tm">'+ymdhmToStr(a[i].ymdhm)+'</span><span class="v">'+fmt(a[i].val,dec)+unit+'</span></div>';
+  return h;
+}
+function within4h(rows){  // rows 최신순 → 최신 기준 240분 이내만
+  if(!rows.length) return rows;
+  var lm=ymdhmToMs(rows[0].ymdhm);
+  return rows.filter(function(r){return lm-ymdhmToMs(r.ymdhm)<=240*60000;});
+}
+function renderDam(nowWin, pastWin, rows){
   var rowsHtml=function(w){
     if(!w.length) return '<div class="drow"><span class="tm">—</span><span class="v">—</span></div>';
     var a=w.slice().reverse(), h='';  // 과거→최신 순으로, 맨 아래(최신)를 강조
@@ -576,6 +597,7 @@ function renderDam(nowWin, pastWin){
   };
   $('damPastRows').innerHTML=rowsHtml(pastWin);
   $('damNowRows').innerHTML=rowsHtml(nowWin);
+  if($('damFullRows') && rows) $('damFullRows').innerHTML=histRows(within4h(rows).map(function(r){return {ymdhm:r.ymdhm,val:r.v};}), ' ㎥/s', 1);
   // 각 열의 최신 방류량을 3000 운항금지선 기준으로 판정 (강조된 행 = 각 창의 최신값)
   setDamStat($('damPastStat'), pastWin[0]?pastWin[0].v:NaN, '운항금지', '주의');
   setDamStat($('damNowStat'), nowWin[0]?nowWin[0].v:NaN, '4시간 뒤 운항금지', '4시간 뒤 주의');
@@ -589,7 +611,7 @@ function renderDam(nowWin, pastWin){
 }
 
 /* ----- 한강 역류 감시: 행주대교 수위 최근 30분 (팔당댐 서식) ----- */
-var BACKFLOW={ code:"1019630", winMin:30 };  // 행주대교 수위관측소
+var BACKFLOW={ code:"1019630", winMin:240 };  // 행주대교 수위관측소 · 4시간 조회(요약은 최신 3개)
 function backflowUrl(){
   var now=new Date(Date.now()+9*3600000);  // KST 10분 정각
   now.setUTCMinutes(Math.floor(now.getUTCMinutes()/10)*10,0,0);
@@ -607,15 +629,16 @@ function fetchBackflow(){
      for(var i=0;i<a.length;i++){var w=parseFloat(a[i].wl); if(!isNaN(w)) rows.push({ymdhm:a[i].ymdhm,wl:w});}
      if(!rows.length) throw new Error('값 없음');
      rows.sort(function(x,y){return x.ymdhm<y.ymdhm?1:-1;});  // 최신순
-     renderBackflow(rows.slice(0,3));})
+     renderBackflow(rows);})
    .catch(function(e){ var el=$('bfT'); if(el){el.className='t'; el.textContent='호출 실패';} });
 }
-function renderBackflow(win){
-  var a=win.slice().reverse(), h='';  // 과거→최신, 최신 강조
+function renderBackflow(rows){
+  var a=rows.slice(0,3).reverse(), h='';  // 요약: 최근 30분 3개(과거→최신, 최신 강조)
   for(var i=0;i<a.length;i++)
     h+='<div class="drow'+(i===a.length-1?' latest':'')+'"><span class="tm">'+ymdhmToStr(a[i].ymdhm)+'</span><span class="v">'+fmt(a[i].wl,2)+' m</span></div>';
   $('bfRows').innerHTML=h;
-  var tEl=$('bfT'), latest=win[0]?win[0].ymdhm:null;
+  if($('bfFullRows')) $('bfFullRows').innerHTML=histRows(within4h(rows).map(function(r){return {ymdhm:r.ymdhm,val:r.wl};}), ' m', 2);
+  var tEl=$('bfT'), latest=rows[0]?rows[0].ymdhm:null;
   if(latest){ var label='갱신 '+ymdhmToStr(latest), age=ymdhmAgeMin(latest);
     if(age!=null){ label+=' · '+ageStr(age); if(age>=STALE_MIN){tEl.className='t stale';label+=' ⚠';} else tEl.className='t'; }
     tEl.textContent=label; }
