@@ -147,9 +147,13 @@
   각 열 **최근 30분(10분 3개)** + 공용 "과거 4시간 기록" 펼치기(안에도 2열 `#bfFullRows`/`#hgFullRows`).
 - **신선도는 카드 공용 `#wlT` 하나**(팔당댐 카드가 두 열에 `#damT` 하나 쓰는 것과 동일). 두 관측소는 같은
   10분 주기라 시각 일치 → `fetchWL(...,'wlT')`로 둘 다 같은 값 기록.
-- **공용 함수(2026-07-13)**: `wlUrl(code)`/`fetchWL(code,sumId,fullId,tId)`/`renderWL(rows,...)` 하나로 두 관측소
-  처리(HRFCO 수위 4시간 기간조회). `fetchAll`에서 `fetchWL('1019630','bfRows','bfFullRows','wlT')`(행주),
-  `fetchWL('1018683','hgRows','hgFullRows','wlT')`(한강대교) 두 번 호출. 수동 모드는 안내(`applyModeUI`의 `#wlNote`).
+- **공용 함수(2026-07-13)**: `wlUrl(code)`/`fetchWL(code,sumId,fullId,tId,bridge)`/`renderWL(rows,...)` 하나로 두 관측소
+  처리(HRFCO 수위 4시간 기간조회). `fetchAll`에서 `fetchWL('1019630',...,hj)`(행주), `fetchWL('1018683',...)`(한강대교) 호출.
+  수동 모드는 안내(`applyModeUI`의 `#wlNote`).
+- **행주 HRFCO 호출 통합(2026-07-13)**: 행주(1019630) 4시간 기간조회의 최신값(`rows[0]`)이 통과높이에 필요한
+  값과 동일 → `fetchWL`에 `bridge` 인자를 넘겨 **통과높이 카드까지 이 한 번으로 렌더**(기존 `renderBridge` 재사용).
+  `fetchAll`의 교량 루프는 행주를 건너뜀(`obscd!=='1019630'`). 결과: 새로고침당 HRFCO 호출 **5→4회**. 실패 시
+  `fetchWL` catch가 통과높이 카드 실패도 `showMsg`로 안내. (잠수교는 기존 `fetchBridge` 경로 그대로.)
 - **한강대교 수위(1018683)는 마포대교 대체**: 마포대교엔 HRFCO 관측소가 없음(서울 본류 = 잠수교/한강대교/행주대교뿐).
   가장 가까운 한강대교(마포 상류 ≈3km, 수위 사실상 동일). 카드 열 라벨·안내(`#wlNote`)에 명시.
 - 배치: `#cards` 안 정적 HTML(인천 카드 뒤)로 두되 `buildCards()`가 **행주대교 카드 바로 아래로 이동**

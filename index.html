@@ -563,12 +563,13 @@ function fetchBridge(b){
 function fetchAll(){
   if(!CONFIG.ENDPOINT_TEMPLATE && !G.apiKey){ showMsg('자동 모드는 인증키가 필요합니다. 설정에서 넣어 주세요. 그 전까지는 수동 입력으로 쓸 수 있습니다.'); return; }
   hideMsg();
-  bridges.forEach(function(b){ if(b.obscd) fetchBridge(b); });
+  bridges.forEach(function(b){ if(b.obscd && b.obscd!=='1019630') fetchBridge(b); });  // 행주(1019630)는 아래 수위 조회로 통합
   fetchDam();
   fetchTide();
   fetchTideCur();
-  fetchWL('1019630','bfRows','bfFullRows','wlT');   // 행주대교
-  fetchWL('1018683','hgRows','hgFullRows','wlT');   // 한강대교(마포대교 대체) · 신선도는 카드 공용 wlT
+  var hj=null; for(var i=0;i<bridges.length;i++){ if(bridges[i].obscd==='1019630'){ hj=bridges[i]; break; } }
+  fetchWL('1019630','bfRows','bfFullRows','wlT', hj);   // 행주대교: 통과높이+수위 카드 한 번에(중복 호출 제거)
+  fetchWL('1018683','hgRows','hgFullRows','wlT');       // 한강대교(마포대교 대체) · 신선도는 카드 공용 wlT
 }
 
 /* ----- 팔당댐 방류량 (HRFCO 댐 API, 수위와 같은 키 사용) ----- */
@@ -656,7 +657,7 @@ function wlUrl(code){  // HRFCO 수위 4시간 기간조회(10분 정각 정렬)
   var t='https://api.hrfco.go.kr/'+encodeURIComponent(G.apiKey)+'/waterlevel/list/10M/'+code+'/'+f(sdt)+'/'+f(now)+'.json';
   return G.useProxy ? G.proxyUrl+encodeURIComponent(t) : t;
 }
-function fetchWL(code, sumId, fullId, tId){
+function fetchWL(code, sumId, fullId, tId, bridge){
   if(!G.apiKey) return;
   fetch(wlUrl(code),{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})
    .then(function(t){var j;try{j=JSON.parse(t);}catch(e){throw new Error('형식 오류');}
@@ -664,8 +665,14 @@ function fetchWL(code, sumId, fullId, tId){
      for(var i=0;i<a.length;i++){var w=parseFloat(a[i].wl); if(!isNaN(w)) rows.push({ymdhm:a[i].ymdhm,wl:w});}
      if(!rows.length) throw new Error('값 없음');
      rows.sort(function(x,y){return x.ymdhm<y.ymdhm?1:-1;});  // 최신순
-     renderWL(rows, sumId, fullId, tId);})
-   .catch(function(e){ var el=$(tId); if(el){el.className='t'; el.textContent='호출 실패';} });
+     renderWL(rows, sumId, fullId, tId);
+     if(bridge){ var L=rows[0];  // 같은 관측소면 통과높이 카드도 이 최신값으로(중복 호출 제거)
+       var card=document.querySelector('.card[data-id="'+bridge.id+'"]');
+       if(card) card.querySelector('[data-r=wl]').value=fmt(L.wl,2);
+       renderBridge(bridge, L.wl, ymdhmToStr(L.ymdhm)||nowStr(), L.ymdhm);
+     }})
+   .catch(function(e){ var el=$(tId); if(el){el.className='t'; el.textContent='호출 실패';}
+     if(bridge) showMsg(bridge.name+' 자동 호출 실패: '+e.message+'. 프록시 설정을 바꾸거나 수동 입력을 쓰세요.', true); });
 }
 function renderWL(rows, sumId, fullId, tId){
   var a=rows.slice(0,3).reverse(), h='';  // 요약: 최근 30분 3개(과거→최신, 최신 강조)
