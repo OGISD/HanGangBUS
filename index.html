@@ -247,6 +247,12 @@
       <details class="hist"><summary>과거 4시간 기록</summary><div class="drows scroll" id="bfFullRows"></div></details>
       <div class="dnote" id="bfNote">※ 한강 역류 판정을 위해 넣은 정보이며 개선 중입니다.</div>
     </div>
+    <div class="card" id="hangangCard">
+      <div class="chead"><span class="nm">한강대교 수위</span><span class="t" id="hgT">—</span></div>
+      <div class="drows" id="hgRows"><div class="drow"><span class="tm">—</span><span class="v">—</span></div></div>
+      <details class="hist"><summary>과거 4시간 기록</summary><div class="drows scroll" id="hgFullRows"></div></details>
+      <div class="dnote" id="hgNote">※ 마포대교 지점 관측소가 없어, 가장 가까운 한강대교 수위입니다(마포대교와 사실상 동일).</div>
+    </div>
   </div>
 
   <details id="setPanel" style="display:none">
@@ -460,9 +466,10 @@ function buildCards(){
     apply.onclick=function(){var v=parseFloat(wl.value); if(isNaN(v)){showMsg('수위를 숫자로 입력해 주세요.',true);return;} hideMsg(); renderBridge(b, v, nowStr());};
     wl.addEventListener('keyup',function(e){if(e.key==='Enter')apply.click();});
   });
-  // 역류 감시 카드를 행주대교 카드 바로 아래로 이동
-  var hj=c.querySelector('.card[data-id="haengju"]'), bf=$('backflowCard');
+  // 역류 감시(행주 수위) 카드 → 행주대교 카드 바로 아래, 한강대교 수위 카드 → 그 아래
+  var hj=c.querySelector('.card[data-id="haengju"]'), bf=$('backflowCard'), hg=$('hangangCard');
   if(hj&&bf) hj.insertAdjacentElement('afterend', bf);
+  if(bf&&hg) bf.insertAdjacentElement('afterend', hg);
   applyModeUI();
   // 초기 표시
   bridges.forEach(function(b){ var v=parseFloat(b.sampleWl); if(!isNaN(v)) renderBridge(b, v, nowStr()); });
@@ -534,7 +541,8 @@ function fetchAll(){
   fetchDam();
   fetchTide();
   fetchTideCur();
-  fetchBackflow();
+  fetchWL('1019630','bfRows','bfFullRows','bfT');   // 행주대교
+  fetchWL('1018683','hgRows','hgFullRows','hgT');   // 한강대교(마포대교 대체)
 }
 
 /* ----- 팔당댐 방류량 (HRFCO 댐 API, 수위와 같은 키 사용) ----- */
@@ -612,35 +620,34 @@ function renderDam(nowWin, pastWin, rows){
   }
 }
 
-/* ----- 한강 역류 감시: 행주대교 수위 최근 30분 (팔당댐 서식) ----- */
-var BACKFLOW={ code:"1019630", winMin:240 };  // 행주대교 수위관측소 · 4시간 조회(요약은 최신 3개)
-function backflowUrl(){
-  var now=new Date(Date.now()+9*3600000);  // KST 10분 정각
+/* ----- 수위 관측소 카드(행주대교·한강대교) 공용: 4시간 조회, 요약 최신 3개 + 과거 4시간 전체 ----- */
+function wlUrl(code){  // HRFCO 수위 4시간 기간조회(10분 정각 정렬)
+  var now=new Date(Date.now()+9*3600000);
   now.setUTCMinutes(Math.floor(now.getUTCMinutes()/10)*10,0,0);
   var f=function(d){var p=function(n){return(n<10?'0':'')+n;};
     return ''+d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+p(d.getUTCHours())+p(d.getUTCMinutes());};
-  var sdt=new Date(now.getTime()-(BACKFLOW.winMin+10)*60000);
-  var t='https://api.hrfco.go.kr/'+encodeURIComponent(G.apiKey)+'/waterlevel/list/10M/'+BACKFLOW.code+'/'+f(sdt)+'/'+f(now)+'.json';
+  var sdt=new Date(now.getTime()-250*60000);  // 4시간 + 여유 10분
+  var t='https://api.hrfco.go.kr/'+encodeURIComponent(G.apiKey)+'/waterlevel/list/10M/'+code+'/'+f(sdt)+'/'+f(now)+'.json';
   return G.useProxy ? G.proxyUrl+encodeURIComponent(t) : t;
 }
-function fetchBackflow(){
+function fetchWL(code, sumId, fullId, tId){
   if(!G.apiKey) return;
-  fetch(backflowUrl(),{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})
+  fetch(wlUrl(code),{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})
    .then(function(t){var j;try{j=JSON.parse(t);}catch(e){throw new Error('형식 오류');}
      var a=(j&&j.content)?j.content:[], rows=[];
      for(var i=0;i<a.length;i++){var w=parseFloat(a[i].wl); if(!isNaN(w)) rows.push({ymdhm:a[i].ymdhm,wl:w});}
      if(!rows.length) throw new Error('값 없음');
      rows.sort(function(x,y){return x.ymdhm<y.ymdhm?1:-1;});  // 최신순
-     renderBackflow(rows);})
-   .catch(function(e){ var el=$('bfT'); if(el){el.className='t'; el.textContent='호출 실패';} });
+     renderWL(rows, sumId, fullId, tId);})
+   .catch(function(e){ var el=$(tId); if(el){el.className='t'; el.textContent='호출 실패';} });
 }
-function renderBackflow(rows){
+function renderWL(rows, sumId, fullId, tId){
   var a=rows.slice(0,3).reverse(), h='';  // 요약: 최근 30분 3개(과거→최신, 최신 강조)
   for(var i=0;i<a.length;i++)
     h+='<div class="drow'+(i===a.length-1?' latest':'')+'"><span class="tm">'+ymdhmToStr(a[i].ymdhm)+'</span><span class="v">'+fmt(a[i].wl,2)+' m</span></div>';
-  $('bfRows').innerHTML=h;
-  if($('bfFullRows')) $('bfFullRows').innerHTML=histRows(within4h(rows).map(function(r){return {ymdhm:r.ymdhm,val:r.wl};}), ' m', 2);
-  var tEl=$('bfT'), latest=rows[0]?rows[0].ymdhm:null;
+  $(sumId).innerHTML=h;
+  if($(fullId)) $(fullId).innerHTML=histRows(within4h(rows).map(function(r){return {ymdhm:r.ymdhm,val:r.wl};}), ' m', 2);
+  var tEl=$(tId), latest=rows[0]?rows[0].ymdhm:null;
   if(latest){ var label='갱신 '+ymdhmToStr(latest), age=ymdhmAgeMin(latest);
     if(age!=null){ label+=' · '+ageStr(age); if(age>=STALE_MIN){tEl.className='t stale';label+=' ⚠';} else tEl.className='t'; }
     tEl.textContent=label; }
@@ -792,6 +799,10 @@ function applyModeUI(){
   if(bn) bn.textContent = G.mode==='manual'
     ? '행주대교 수위는 자동 모드에서만 조회됩니다.'
     : '※ 한강 역류 판정을 위해 넣은 정보이며 개선 중입니다.';
+  var hn=$('hgNote');
+  if(hn) hn.textContent = G.mode==='manual'
+    ? '한강대교 수위는 자동 모드에서만 조회됩니다.'
+    : '※ 마포대교 지점 관측소가 없어, 가장 가까운 한강대교 수위입니다(마포대교와 사실상 동일).';
 }
 function setMode(m){G.mode=m;store.set('hb_mode',m);applyModeUI();setupTimer();if(m==='auto')fetchAll();}
 

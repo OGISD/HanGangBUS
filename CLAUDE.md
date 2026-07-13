@@ -141,12 +141,17 @@
   moonrise/moonset(HHMM, 공백 trim, 없으면 '—'). `RISESET`/`fetchRiseSet()/hhmm()`. fetchAll·init에서 호출.
   위치는 인천(같은 카드 데이터와 일관). 서울과 1분 이내 차이.
 
-## 한강 역류 감시 카드 (2026-07-08, 행주대교 카드 밑)
-- `#backflowCard`(정적 카드) — **행주대교 수위 최근 30분(10분 단위 3개)** 요약, 팔당댐 서식(`.drows/.drow`, 최신 강조,
-  신선도 `#bfT`). HRFCO 행주대교(1019630) 기간조회. `BACKFLOW`(winMin 240=4시간 조회, 요약은 최신 3개)/`backflowUrl()/fetchBackflow()/renderBackflow()`.
-  카드 안 "과거 4시간 기록" 펼치면 4시간 전체가 `#bfFullRows`에 스크롤 목록으로(공통 `histRows()`).
-  `fetchAll`에서 호출(자동 모드), 수동 모드는 안내(`applyModeUI`의 `#bfNote`).
-- 배치: `#cards` 안 정적 HTML(인천 카드 뒤)로 두되 `buildCards()`가 **행주대교 카드 바로 아래로 이동**(insertAdjacentElement afterend).
+## 한강 역류 감시 카드 + 한강대교 수위 카드 (2026-07-08, 행주대교 카드 밑)
+- `#backflowCard`(행주대교 수위)·`#hangangCard`(한강대교 수위) — 둘 다 정적 카드, **최근 30분(10분 단위 3개)**
+  요약 + "과거 4시간 기록" 펼치기(스크롤 `#bfFullRows`/`#hgFullRows`). 팔당댐 서식(`.drows/.drow`, 최신 강조, 신선도 `#bfT`/`#hgT`).
+- **공용 함수로 일반화(2026-07-13)**: `wlUrl(code)`/`fetchWL(code,sumId,fullId,tId)`/`renderWL(rows,...)` 하나로
+  두 관측소 모두 처리(HRFCO 수위 4시간 기간조회). `fetchAll`에서 `fetchWL('1019630',...행주)`,
+  `fetchWL('1018683',...한강대교)` 두 번 호출. (예전 `BACKFLOW`/`backflowUrl`/`fetchBackflow`/`renderBackflow` 폐기.)
+  수동 모드는 안내(`applyModeUI`의 `#bfNote`/`#hgNote`).
+- **한강대교 수위(1018683)는 마포대교 대체**: 마포대교엔 HRFCO 관측소가 없음(서울 본류 = 잠수교/한강대교/행주대교뿐).
+  가장 가까운 한강대교(마포 상류 ≈3km, 수위 사실상 동일). 카드 라벨·안내(`#hgNote`)에 그 사실 명시.
+- 배치: `#cards` 안 정적 HTML(인천 카드 뒤)로 두되 `buildCards()`가 **행주대교 카드 밑에 역류(행주 수위)→한강대교 순으로 이동**
+  (insertAdjacentElement afterend 연쇄). 현재 순서: 잠수교 → 여의도물때 → 행주대교 → 행주수위 → 한강대교수위 → 인천물때.
 - **역류 원리**: 인천 조위가 신곡수중보(≈720cm)를 넘으면 밀물이 한강 상류로 역류. 신곡수중보 지점 수위는
   아라한강갑문(내) 1019635로도 조회 가능(김포 고촌 신곡리, 실시간).
 - **역류 자동 판정 미구현(대기)**: 인천 조위 720cm 기준으로 판정 예정이나, 실제 720 초과일 때 검증 후 도입.
