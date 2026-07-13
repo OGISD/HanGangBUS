@@ -193,7 +193,9 @@ var CONFIG = {
   구현은 index.html "시작" 직전 IIFE.
 - 분기: **안드로이드/크롬** = `beforeinstallprompt` 가로채 네이티브 설치창. **아이폰(사파리)** = 자동 추가
   불가라 "공유 → 홈 화면에 추가" 안내 토글. **그 외** = 메뉴 안내.
-- `display-mode: standalone`(이미 설치)면 표시 안 함. ✕로 닫으면 `hb_a2hs='0'`로 그 기기에서 영구 숨김.
+- `display-mode: standalone`(이미 설치)면 표시 안 함. ✕로 닫으면 **7일간만 숨김(스누즈)** — `hb_a2hs`에
+  **만료 timestamp(ms)** 저장, `snoozeUntil>Date.now()`면 숨김. 실수로 눌러도 7일 뒤 자동 재표시(영구 아님).
+  기간은 `SNOOZE_DAYS`(=7). 옛 영구값 `'0'`은 `parseInt→0`이라 자동으로 다시 보임(마이그레이션 불필요).
 - 웹 매니페스트(`manifest.webmanifest`)+`icon-512.png`가 설치 아이콘·이름 제공(이미 존재).
 
 ## 로컬 미리보기(개발용)

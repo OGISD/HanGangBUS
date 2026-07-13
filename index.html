@@ -210,7 +210,7 @@
 
   <div class="a2hs" id="a2hs">
     <button class="a2hs-btn" id="a2hsBtn">📲 홈 화면에 바로가기 추가</button>
-    <button class="a2hs-x" id="a2hsX" title="닫기">✕</button>
+    <button class="a2hs-x" id="a2hsX" title="일주일간 숨기기">✕</button>
   </div>
   <div class="a2hs-guide" id="a2hsGuide"></div>
 
@@ -923,10 +923,11 @@ if($('lockSet')) $('lockSet').onclick=function(e){ e.preventDefault();
 (function(){
   var wrap=$('a2hs'), btn=$('a2hsBtn'), x=$('a2hsX'), guide=$('a2hsGuide');
   if(!wrap) return;
-  // 이미 홈 화면 앱으로 실행 중이거나, 사용자가 닫았으면 표시 안 함
+  // 이미 홈 화면 앱으로 실행 중이거나, 최근에 닫아(스누즈) 유효기간 내면 표시 안 함
+  var SNOOZE_DAYS=7;  // ✕로 닫으면 이 기간 동안만 숨김(영구 아님) → 실수로 눌러도 지나면 다시 뜸
   var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
-  var dismissed=false; try{ dismissed=localStorage.getItem('hb_a2hs')==='0'; }catch(e){}
-  if(standalone||dismissed) return;
+  var snoozeUntil=0; try{ snoozeUntil=parseInt(localStorage.getItem('hb_a2hs')||'',10)||0; }catch(e){}  // 옛 '0'값은 parseInt→0이라 자동으로 다시 보임
+  if(standalone || snoozeUntil>Date.now()) return;
   wrap.style.display='flex';   // 그 외엔 항상 보이게(요청: 잘 보이도록)
 
   var ua=navigator.userAgent||'', isIOS=/iphone|ipad|ipod/i.test(ua) && !window.MSStream, deferred=null;
@@ -947,7 +948,7 @@ if($('lockSet')) $('lockSet').onclick=function(e){ e.preventDefault();
       guide.style.display='block';
     }
   };
-  x.onclick=function(){ hide(); try{ localStorage.setItem('hb_a2hs','0'); }catch(e){} };
+  x.onclick=function(){ hide(); try{ localStorage.setItem('hb_a2hs', String(Date.now()+SNOOZE_DAYS*24*3600*1000)); }catch(e){} };
 })();
 
 /* ----- 시작 ----- */
