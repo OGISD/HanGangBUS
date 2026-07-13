@@ -141,17 +141,19 @@
   moonrise/moonset(HHMM, 공백 trim, 없으면 '—'). `RISESET`/`fetchRiseSet()/hhmm()`. fetchAll·init에서 호출.
   위치는 인천(같은 카드 데이터와 일관). 서울과 1분 이내 차이.
 
-## 한강 역류 감시 카드 + 한강대교 수위 카드 (2026-07-08, 행주대교 카드 밑)
-- `#backflowCard`(행주대교 수위)·`#hangangCard`(한강대교 수위) — 둘 다 정적 카드, **최근 30분(10분 단위 3개)**
-  요약 + "과거 4시간 기록" 펼치기(스크롤 `#bfFullRows`/`#hgFullRows`). 팔당댐 서식(`.drows/.drow`, 최신 강조, 신선도 `#bfT`/`#hgT`).
-- **공용 함수로 일반화(2026-07-13)**: `wlUrl(code)`/`fetchWL(code,sumId,fullId,tId)`/`renderWL(rows,...)` 하나로
-  두 관측소 모두 처리(HRFCO 수위 4시간 기간조회). `fetchAll`에서 `fetchWL('1019630',...행주)`,
-  `fetchWL('1018683',...한강대교)` 두 번 호출. (예전 `BACKFLOW`/`backflowUrl`/`fetchBackflow`/`renderBackflow` 폐기.)
-  수동 모드는 안내(`applyModeUI`의 `#bfNote`/`#hgNote`).
+## 한강 수위 카드 (행주대교+한강대교 2열, 2026-07-13 합침 · 행주대교 카드 밑)
+- **한 카드 `#wlCard`에 좌우 2열**(팔당댐 방류 카드와 동일 `.dam/.dcol/.ddiv` 서식): 왼쪽 **행주대교**(bf*),
+  오른쪽 **한강대교**(hg*). 공간 절약용으로 예전 별도 두 카드(`#backflowCard`/`#hangangCard`)를 합침(2026-07-13).
+  각 열 **최근 30분(10분 3개)** + 공용 "과거 4시간 기록" 펼치기(안에도 2열 `#bfFullRows`/`#hgFullRows`).
+- **신선도는 카드 공용 `#wlT` 하나**(팔당댐 카드가 두 열에 `#damT` 하나 쓰는 것과 동일). 두 관측소는 같은
+  10분 주기라 시각 일치 → `fetchWL(...,'wlT')`로 둘 다 같은 값 기록.
+- **공용 함수(2026-07-13)**: `wlUrl(code)`/`fetchWL(code,sumId,fullId,tId)`/`renderWL(rows,...)` 하나로 두 관측소
+  처리(HRFCO 수위 4시간 기간조회). `fetchAll`에서 `fetchWL('1019630','bfRows','bfFullRows','wlT')`(행주),
+  `fetchWL('1018683','hgRows','hgFullRows','wlT')`(한강대교) 두 번 호출. 수동 모드는 안내(`applyModeUI`의 `#wlNote`).
 - **한강대교 수위(1018683)는 마포대교 대체**: 마포대교엔 HRFCO 관측소가 없음(서울 본류 = 잠수교/한강대교/행주대교뿐).
-  가장 가까운 한강대교(마포 상류 ≈3km, 수위 사실상 동일). 카드 라벨·안내(`#hgNote`)에 그 사실 명시.
-- 배치: `#cards` 안 정적 HTML(인천 카드 뒤)로 두되 `buildCards()`가 **행주대교 카드 밑에 역류(행주 수위)→한강대교 순으로 이동**
-  (insertAdjacentElement afterend 연쇄). 현재 순서: 잠수교 → 여의도물때 → 행주대교 → 행주수위 → 한강대교수위 → 인천물때.
+  가장 가까운 한강대교(마포 상류 ≈3km, 수위 사실상 동일). 카드 열 라벨·안내(`#wlNote`)에 명시.
+- 배치: `#cards` 안 정적 HTML(인천 카드 뒤)로 두되 `buildCards()`가 **행주대교 카드 바로 아래로 이동**
+  (insertAdjacentElement afterend). 현재 순서: 잠수교 → 여의도물때 → 행주대교 → 한강 수위(행주·한강대교) → 인천물때.
 - **역류 원리**: 인천 조위가 신곡수중보(≈720cm)를 넘으면 밀물이 한강 상류로 역류. 신곡수중보 지점 수위는
   아라한강갑문(내) 1019635로도 조회 가능(김포 고촌 신곡리, 실시간).
 - **역류 자동 판정 미구현(대기)**: 인천 조위 720cm 기준으로 판정 예정이나, 실제 720 초과일 때 검증 후 도입.

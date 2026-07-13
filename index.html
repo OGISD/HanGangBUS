@@ -258,17 +258,27 @@
         <span class="pct"><b id="tideCurSpd">—</b>%</span>
       </div>
     </div>
-    <div class="card" id="backflowCard">
-      <div class="chead"><span class="nm">행주대교 수위</span><span class="t" id="bfT">—</span></div>
-      <div class="drows" id="bfRows"><div class="drow"><span class="tm">—</span><span class="v">—</span></div></div>
-      <details class="hist"><summary>과거 4시간 기록</summary><div class="drows scroll" id="bfFullRows"></div></details>
-      <div class="dnote" id="bfNote">※ 한강 역류 판정을 위해 넣은 정보이며 개선 중입니다.</div>
-    </div>
-    <div class="card" id="hangangCard">
-      <div class="chead"><span class="nm">한강대교 수위</span><span class="t" id="hgT">—</span></div>
-      <div class="drows" id="hgRows"><div class="drow"><span class="tm">—</span><span class="v">—</span></div></div>
-      <details class="hist"><summary>과거 4시간 기록</summary><div class="drows scroll" id="hgFullRows"></div></details>
-      <div class="dnote" id="hgNote">※ 마포대교 지점 관측소가 없어, 가장 가까운 한강대교 수위입니다(마포대교와 사실상 동일).</div>
+    <div class="card" id="wlCard">
+      <div class="chead"><span class="nm">한강 수위 · 최근 30분</span><span class="t" id="wlT">—</span></div>
+      <div class="dam">
+        <div class="dcol">
+          <div class="dlbl">행주대교</div>
+          <div class="drows" id="bfRows"><div class="drow"><span class="tm">—</span><span class="v">—</span></div></div>
+        </div>
+        <div class="ddiv"></div>
+        <div class="dcol">
+          <div class="dlbl">한강대교</div>
+          <div class="drows" id="hgRows"><div class="drow"><span class="tm">—</span><span class="v">—</span></div></div>
+        </div>
+      </div>
+      <details class="hist"><summary>과거 4시간 기록</summary>
+        <div class="dam" style="margin-top:8px">
+          <div class="dcol"><div class="dlbl">행주대교</div><div class="drows scroll" id="bfFullRows"></div></div>
+          <div class="ddiv"></div>
+          <div class="dcol"><div class="dlbl">한강대교</div><div class="drows scroll" id="hgFullRows"></div></div>
+        </div>
+      </details>
+      <div class="dnote" id="wlNote">※ 한강대교는 마포대교 대체(가까운 관측소, 수위 사실상 동일) · 역류 판정용 참고 정보이며 개선 중입니다.</div>
     </div>
   </div>
 
@@ -483,10 +493,9 @@ function buildCards(){
     apply.onclick=function(){var v=parseFloat(wl.value); if(isNaN(v)){showMsg('수위를 숫자로 입력해 주세요.',true);return;} hideMsg(); renderBridge(b, v, nowStr());};
     wl.addEventListener('keyup',function(e){if(e.key==='Enter')apply.click();});
   });
-  // 역류 감시(행주 수위) 카드 → 행주대교 카드 바로 아래, 한강대교 수위 카드 → 그 아래
-  var hj=c.querySelector('.card[data-id="haengju"]'), bf=$('backflowCard'), hg=$('hangangCard');
-  if(hj&&bf) hj.insertAdjacentElement('afterend', bf);
-  if(bf&&hg) bf.insertAdjacentElement('afterend', hg);
+  // 한강 수위(행주+한강대교 2열) 카드 → 행주대교 카드 바로 아래로 이동
+  var hj=c.querySelector('.card[data-id="haengju"]'), wl=$('wlCard');
+  if(hj&&wl) hj.insertAdjacentElement('afterend', wl);
   applyModeUI();
   // 초기 표시
   bridges.forEach(function(b){ var v=parseFloat(b.sampleWl); if(!isNaN(v)) renderBridge(b, v, nowStr()); });
@@ -558,8 +567,8 @@ function fetchAll(){
   fetchDam();
   fetchTide();
   fetchTideCur();
-  fetchWL('1019630','bfRows','bfFullRows','bfT');   // 행주대교
-  fetchWL('1018683','hgRows','hgFullRows','hgT');   // 한강대교(마포대교 대체)
+  fetchWL('1019630','bfRows','bfFullRows','wlT');   // 행주대교
+  fetchWL('1018683','hgRows','hgFullRows','wlT');   // 한강대교(마포대교 대체) · 신선도는 카드 공용 wlT
 }
 
 /* ----- 팔당댐 방류량 (HRFCO 댐 API, 수위와 같은 키 사용) ----- */
@@ -812,14 +821,10 @@ function applyModeUI(){
   if(dn) dn.textContent = G.mode==='manual'
     ? '방류량은 자동 모드에서만 조회됩니다. 위의 "자동"으로 전환하면 표시됩니다.'
     : '4시간 전 방류량이 지금 여의도 부근에 도달하는 중입니다.';
-  var bn=$('bfNote');
-  if(bn) bn.textContent = G.mode==='manual'
-    ? '행주대교 수위는 자동 모드에서만 조회됩니다.'
-    : '※ 한강 역류 판정을 위해 넣은 정보이며 개선 중입니다.';
-  var hn=$('hgNote');
-  if(hn) hn.textContent = G.mode==='manual'
-    ? '한강대교 수위는 자동 모드에서만 조회됩니다.'
-    : '※ 마포대교 지점 관측소가 없어, 가장 가까운 한강대교 수위입니다(마포대교와 사실상 동일).';
+  var wn=$('wlNote');
+  if(wn) wn.textContent = G.mode==='manual'
+    ? '한강 수위(행주·한강대교)는 자동 모드에서만 조회됩니다.'
+    : '※ 한강대교는 마포대교 대체(가까운 관측소, 수위 사실상 동일) · 역류 판정용 참고 정보이며 개선 중입니다.';
 }
 function setMode(m){G.mode=m;store.set('hb_mode',m);applyModeUI();setupTimer();if(m==='auto')fetchAll();}
 
