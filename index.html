@@ -63,6 +63,17 @@
   .seg button{border:0;background:transparent;color:var(--muted);font:600 13px inherit;padding:9px 14px;border-radius:9px;cursor:pointer}
   .seg button.on{background:var(--panel);color:var(--text)}
 
+  /* 홈 화면 바로가기(PWA 설치) */
+  .a2hs{display:none;align-items:center;gap:6px;margin:0 0 12px}
+  .a2hs-btn{flex:1;padding:11px;border-radius:12px;border:1px solid #2f6d97;
+    background:rgba(42,111,160,.18);color:#cfe6f7;font:600 14px inherit;cursor:pointer;text-align:center}
+  .a2hs-btn:active{transform:scale(.985)}
+  .a2hs-x{flex:none;width:38px;padding:11px 0;border-radius:12px;border:1px solid var(--line);
+    background:var(--panel);color:var(--muted);font:600 13px inherit;cursor:pointer}
+  .a2hs-guide{display:none;margin:-4px 0 12px;padding:11px 13px;border-radius:12px;
+    border:1px dashed #2f6d97;background:rgba(42,111,160,.10);color:#cfe6f7;font-size:13px;line-height:1.6}
+  .a2hs-guide b{color:#fff}
+
   /* 교량 카드 */
   .card{background:var(--ink2);border:1px solid var(--line);border-radius:18px;padding:13px;margin-bottom:12px}
   .chead{display:flex;align-items:center;gap:8px;margin-bottom:10px}
@@ -196,6 +207,12 @@
   <p class="lede">통과높이 = 기준높이 − 현재 수위 · 출처 한강홍수통제소</p>
   <p class="disc">⚠ <b>참고용 정보입니다.</b> 실제 운항·통항 여부는 한강홍수통제소 등 공식 정보로 반드시 직접 확인하세요. 수위 데이터는 지연·중단될 수 있습니다.</p>
   <div class="expwarn" id="expWarn"></div>
+
+  <div class="a2hs" id="a2hs">
+    <button class="a2hs-btn" id="a2hsBtn">📲 홈 화면에 바로가기 추가</button>
+    <button class="a2hs-x" id="a2hsX" title="닫기">✕</button>
+  </div>
+  <div class="a2hs-guide" id="a2hsGuide"></div>
 
   <div class="bar">
     <button class="btn primary" id="refresh">새로고침</button>
@@ -889,6 +906,37 @@ if($('lockSet')) $('lockSet').onclick=function(e){ e.preventDefault();
   store.set('hb_admin','0'); applyAdmin();
   var p=$('setPanel'); if(p) p.open=false;
   showMsg('설정을 숨겼습니다. (?admin 주소 또는 제목 5회 탭으로 다시 열 수 있어요)'); setTimeout(hideMsg,2400); };
+
+/* ----- 홈 화면 바로가기(PWA 설치) 버튼 ----- */
+(function(){
+  var wrap=$('a2hs'), btn=$('a2hsBtn'), x=$('a2hsX'), guide=$('a2hsGuide');
+  if(!wrap) return;
+  // 이미 홈 화면 앱으로 실행 중이거나, 사용자가 닫았으면 표시 안 함
+  var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
+  var dismissed=false; try{ dismissed=localStorage.getItem('hb_a2hs')==='0'; }catch(e){}
+  if(standalone||dismissed) return;
+  wrap.style.display='flex';   // 그 외엔 항상 보이게(요청: 잘 보이도록)
+
+  var ua=navigator.userAgent||'', isIOS=/iphone|ipad|ipod/i.test(ua) && !window.MSStream, deferred=null;
+  // 안드로이드/크롬: 진짜 설치 프롬프트 이벤트를 잡아뒀다가 버튼에서 사용
+  window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); deferred=e; });
+  function hide(){ wrap.style.display='none'; guide.style.display='none'; }
+  btn.onclick=function(){
+    if(deferred){                       // 안드로이드/크롬: 네이티브 설치창
+      deferred.prompt();
+      deferred.userChoice.then(function(c){ if(c&&c.outcome==='accepted') hide(); deferred=null; });
+    } else if(isIOS){                    // 아이폰(사파리): 자동 추가 불가 → 안내
+      guide.innerHTML='아이폰은 자동 추가가 안 돼요. 화면 아래 <b>공유</b> 버튼(□에 ↑)을 누른 뒤 '
+        +'<b>“홈 화면에 추가”</b>를 선택하세요.';
+      guide.style.display = guide.style.display==='block' ? 'none' : 'block';
+    } else {                             // 그 외 브라우저: 메뉴 안내
+      guide.innerHTML='이 브라우저는 자동 추가가 안 될 수 있어요. 브라우저 메뉴(⋮)에서 '
+        +'<b>“홈 화면에 추가”</b>(또는 “앱 설치”)를 선택하세요.';
+      guide.style.display='block';
+    }
+  };
+  x.onclick=function(){ hide(); try{ localStorage.setItem('hb_a2hs','0'); }catch(e){} };
+})();
 
 /* ----- 시작 ----- */
 buildCards();
