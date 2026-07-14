@@ -135,11 +135,12 @@
 - 예보값이라 신선도 경고 없음(대신 "MM/DD 예보" 표기). **수동 모드에서도 표시**(예보라 실시간 무관).
 - 관련 코드: `TIDE` 상수(incheon DT_0001, lagMin 240), `fetchTide()/renderTide()/addMin()/tideFail()`.
   `fetchAll()` 및 init(수동 모드)에서 호출. XML→`DOMParser` 파싱.
-- **일출·일몰·월출·월몰**(2026-07-06, 활성화 후 추가): 인천 물때 카드 하단에 통합(`#sunMoon` 2×2).
-  한국천문연구원 출몰시각 API(`CONFIG.RISESET_ENDPOINT`, B090041 getAreaRiseSetInfo, **물때와 같은
-  TIDE_KEY 사용**, CORS *). 파라미터 `serviceKey·locdate(오늘)·location=인천`. 필드 sunrise/sunset/
-  moonrise/moonset(HHMM, 공백 trim, 없으면 '—'). `RISESET`/`fetchRiseSet()/hhmm()`. fetchAll·init에서 호출.
-  위치는 인천(같은 카드 데이터와 일관). 서울과 1분 이내 차이.
+- **일출·일몰·월출·월몰 — ❌ 현재 없는 기능(2026-07-15 정정)**: 2026-07-06에 인천 카드에 넣었다가,
+  **2026-07-07 조류세기로 교체되면서 제거됨**. 지금은 **`#sunMoon` HTML이 아예 없고 `fetchRiseSet()`도
+  어디서도 호출되지 않는 죽은 코드**(index.html에 보존만 되어 있음. `RISESET`/`fetchRiseSet()/hhmm()`,
+  `CONFIG.RISESET_ENDPOINT` = 한국천문연구원 B090041, 물때와 같은 TIDE_KEY). `API_EXPIRY`에서도 이미 제외됨.
+  ⚠ **인천 카드에 출몰시각이 있다고 문서·Q&A에 쓰지 말 것**(이 잘못된 기록 때문에 2026-07-15 Q&A에
+  허위 기재가 들어갔다가 수정함). 재도입하려면 인천 카드에 마크업(`#sunMoon`)부터 다시 넣고 호출을 살려야 함.
 
 ## 한강 수위 카드 (행주대교+한강대교 2열, 2026-07-13 합침 · 행주대교 카드 밑)
 - **한 카드 `#wlCard`에 좌우 2열**(팔당댐 방류 카드와 동일 `.dam/.dcol/.ddiv` 서식): 왼쪽 **행주대교**(bf*),
