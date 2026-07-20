@@ -192,7 +192,7 @@
   /* 이스터에그: 30초 후 도움 주신 분들 성함이 전광판처럼 흐름 */
   .marquee{display:none;overflow:hidden;white-space:nowrap;margin-top:12px;padding-top:11px;border-top:1px solid var(--line)}
   .marquee.on{display:block;background:linear-gradient(180deg,transparent,rgba(42,111,160,.07))}
-  .marquee span{display:inline-block;padding-left:100%;font-size:clamp(11px,3.5vw,16px);font-weight:800;
+  .marquee>span{display:inline-block;padding-left:100%;font-size:clamp(11px,3.5vw,16px);font-weight:800;  /* 직계 자식만(안의 .ship에 padding 100%가 걸리는 버그 방지) */
     letter-spacing:.01em;color:#bcd2e6;animation:marq 24s linear infinite}
   .marquee b{color:#ffd9a3}
   .marquee .ship{display:inline-block;animation:bob 1.8s ease-in-out infinite}
