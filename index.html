@@ -141,6 +141,18 @@
   .dstat.nogo{color:var(--danger)}
   .dstat.warn{color:var(--caution)}
   .dnote{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:9px;padding-top:9px;border-top:1px solid var(--line)}
+  /* 역류/순류 판정 */
+  .flowbadge{margin:2px 0 10px;padding:8px 10px;border-radius:10px;font-size:13px;font-weight:700;
+    text-align:center;line-height:1.45;border:1px solid var(--line);color:var(--muted)}
+  .flowbadge .sub{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-top:2px}
+  .flowbadge.up{background:rgba(214,90,70,.16);border-color:#7a3a30;color:#ffb9a8}
+  .flowbadge.down{background:rgba(60,130,180,.16);border-color:#2f5f80;color:#bfe0f5}
+  .flowbadge.flat{background:rgba(255,255,255,.05);color:#cdd8e2}
+  .flowbadge.off{opacity:.55}
+  .wltrend{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--muted)}
+  .wltrend.up{color:#ff9f88}
+  .wltrend.down{color:#7fc0e8}
+  .wltrend.flat{color:var(--muted)}
 
   /* 물때(조석) 카드 */
   .tnote{font-size:11px;color:var(--muted);margin:0 0 8px}
@@ -262,14 +274,15 @@
     </div>
     <div class="card" id="wlCard">
       <div class="chead"><span class="nm">한강 수위 · 최근 30분</span><span class="t" id="wlT">—</span></div>
+      <div class="flowbadge off" id="flowBadge">수위 불러오는 중…</div>
       <div class="dam">
         <div class="dcol">
-          <div class="dlbl">행주대교</div>
+          <div class="dlbl">행주대교 <span class="wltrend" id="bfTrend"></span></div>
           <div class="drows" id="bfRows"><div class="drow"><span class="tm">—</span><span class="v">—</span></div></div>
         </div>
         <div class="ddiv"></div>
         <div class="dcol">
-          <div class="dlbl">한강대교</div>
+          <div class="dlbl">한강대교 <span class="wltrend" id="hgTrend"></span></div>
           <div class="drows" id="hgRows"><div class="drow"><span class="tm">—</span><span class="v">—</span></div></div>
         </div>
       </div>
@@ -690,6 +703,58 @@ function renderWL(rows, sumId, fullId, tId){
   if(latest){ var label='갱신 '+ymdhmToStr(latest), age=ymdhmAgeMin(latest);
     if(age!=null){ label+=' · '+ageStr(age); if(age>=STALE_MIN){tEl.className='t stale';label+=' ⚠';} else tEl.className='t'; }
     tEl.textContent=label; }
+  var key = sumId==='bfRows'?'bf':(sumId==='hgRows'?'hg':null);  // 역류 판정용 추세 저장
+  if(key){ flow[key]=wlTrend(rows); renderFlow(); }
+}
+
+/* ----- 한강 역류/순류 판정 (수위 추세 + 인천 조위 위상 교차검증) ----- */
+var FLOW={ winMin:30, deadCm:2 };   // 추세 계산 구간(분)·정체 판정 폭(cm) — 실측 후 보정
+var flow={ bf:null, hg:null, tide:null };   // 각 fetch가 자기 조각 저장 → renderFlow가 합침
+function wlTrend(rows){   // rows: 최신순 10분 간격 {ymdhm,wl} → 최근 winMin 변화량
+  if(!rows||rows.length<2) return null;
+  var k=Math.round(FLOW.winMin/10); if(k>=rows.length) k=rows.length-1;
+  var dCm=Math.round((rows[0].wl-rows[k].wl)*100);
+  return { dCm:dCm, dir: dCm>=FLOW.deadCm?'up' : dCm<=-FLOW.deadCm?'down' : 'flat' };
+}
+function tidePhaseNow(list){   // 오늘 고저조 → 현재 밀물(flood)/썰물(ebb)
+  if(!list||!list.length) return null;
+  var s=list.slice().sort(function(a,b){return a.hm<b.hm?-1:1;});
+  var d=new Date(Date.now()+9*3600000), p=function(n){return(n<10?'0':'')+n;};
+  var now=p(d.getUTCHours())+':'+p(d.getUTCMinutes());
+  for(var i=0;i<s.length;i++){ if(s[i].hm>now) return s[i].high?'flood':'ebb'; }  // 다음 극값: 고조=밀물
+  return s[s.length-1].high?'ebb':'flood';   // 오늘 극값 다 지남: 고조 뒤=썰물
+}
+function trendArrow(t){
+  if(!t) return {txt:'', cls:''};
+  if(t.dir==='up')   return {txt:'↑ +'+t.dCm+'cm', cls:'up'};
+  if(t.dir==='down') return {txt:'↓ '+Math.abs(t.dCm)+'cm', cls:'down'};
+  return {txt:'↔ 0cm', cls:'flat'};
+}
+function renderFlow(){
+  var badge=$('flowBadge'); if(!badge) return;
+  [['bf','bfTrend'],['hg','hgTrend']].forEach(function(pp){   // 열별 화살표
+    var el=$(pp[1]); if(!el) return; var a=trendArrow(flow[pp[0]]);
+    el.textContent=a.txt; el.className='wltrend '+a.cls;
+  });
+  var bf=flow.bf, hg=flow.hg, ph=flow.tide;
+  if(!bf){ badge.className='flowbadge off';
+    badge.textContent=(typeof G!=='undefined'&&G.mode==='manual')?'역류 판정은 자동 모드에서 표시됩니다':'수위 불러오는 중…';
+    return; }
+  var evid=[];
+  if(ph) evid.push('인천 '+(ph==='flood'?'밀물':'썰물'));
+  evid.push('행주 '+(bf.dir==='up'?'↑':bf.dir==='down'?'↓':'↔'));
+  if(hg) evid.push('한강대교 '+(hg.dir==='up'?'↑':hg.dir==='down'?'↓':'↔'));
+  var verdict, cls;
+  if(bf.dir==='up' && (ph==='flood'||ph==null)){
+    cls='up'; verdict='🔺 역류 경향 · 바다→한강(상류)';
+    if(hg&&hg.dir==='up') verdict='🔺 역류 경향 · 바다→한강(상류, 여의도까지)';
+  } else if(bf.dir==='down' && (ph==='ebb'||ph==null)){
+    cls='down'; verdict='🔻 순류 · 한강→바다(하류)';
+  } else {
+    cls='flat'; verdict='⏸ 정체·전환점';
+  }
+  badge.className='flowbadge '+cls;
+  badge.innerHTML=verdict+'<span class="sub">'+evid.join(' · ')+'</span>';
 }
 
 /* ----- 물때 (KHOA 조석예보 고저조, data.go.kr · CORS 허용, 브라우저 직접 호출) ----- */
@@ -760,6 +825,7 @@ function renderTide(list){
   var dstr=ymd?(ymd.slice(5,7)+'/'+ymd.slice(8,10)+' 예보'):'';
   if($('incheonT'))$('incheonT').textContent=dstr;
   if($('yeouidoT'))$('yeouidoT').textContent=dstr;
+  flow.tide=tidePhaseNow(sorted); renderFlow();   // 역류 판정 교차검증용 인천 밀/썰물 위상
 }
 /* ----- 조류세기: KHOA 수치조류도 예측 유향·유속 (실측 예측, 인천 지점) ----- */
 // 인천 최근접 격자점의 유속(cm/s) 추출
@@ -839,6 +905,8 @@ function applyModeUI(){
   if(wn) wn.textContent = G.mode==='manual'
     ? '한강 수위(행주·한강대교)는 자동 모드에서만 조회됩니다.'
     : '※ 역류 판정을 위한 참고 정보이며 개선 중입니다.';
+  if(G.mode==='manual'){ flow.bf=null; flow.hg=null; }  // 수동 모드는 수위 미조회 → 배지 비활성
+  renderFlow();
 }
 function setMode(m){G.mode=m;store.set('hb_mode',m);applyModeUI();setupTimer();if(m==='auto')fetchAll();}
 
