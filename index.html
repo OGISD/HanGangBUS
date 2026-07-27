@@ -153,6 +153,9 @@
   .wltrend.up{color:#ff9f88}
   .wltrend.down{color:#7fc0e8}
   .wltrend.flat{color:var(--muted)}
+  /* 관리자 전용 진단줄(?admin에서만 노출) — 임계값 실측 보정용 원시 수치 */
+  .flowdiag{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);
+    font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums;line-height:1.6;word-break:keep-all}
 
   /* 물때(조석) 카드 */
   .tnote{font-size:11px;color:var(--muted);margin:0 0 8px}
@@ -294,6 +297,7 @@
         </div>
       </details>
       <div class="dnote" id="wlNote">※ 역류 판정을 위한 참고 정보이며 개선 중입니다.</div>
+      <div class="flowdiag" id="flowDiag" style="display:none"></div>
     </div>
   </div>
 
@@ -786,19 +790,20 @@ function renderFlow(){
   var bf=flow.bf, hg=flow.hg, ph=flow.tide;
   if(!bf){ badge.className='flowbadge off';
     badge.textContent=(typeof G!=='undefined'&&G.mode==='manual')?'역류 판정은 자동 모드에서 표시됩니다':'수위 불러오는 중…';
-    return; }
-  var ll=leadLag(flow.bfRows, flow.hgRows);   // 누가 먼저 움직였나(조석 서명 vs 상류 서명)
+    setFlowDiag(null); return; }
+  var ll=leadLag(flow.bfRows, flow.hgRows);   // 누가 먼저 움직였나(조석 영향 추정 vs 방류 영향 추정)
   var evid=[];
   if(ph) evid.push('인천 '+(ph==='flood'?'밀물':'썰물'));
   evid.push('행주 '+(bf.dir==='up'?'↑':bf.dir==='down'?'↓':'↔'));
   if(hg) evid.push('한강대교 '+(hg.dir==='up'?'↑':hg.dir==='down'?'↓':'↔'));
-  if(ll&&ll.lead==='bf') evid.push('행주 선행 '+ll.lagMin+'분(조석 서명)');
-  else if(ll&&ll.lead==='hg') evid.push('한강대교 선행 '+Math.abs(ll.lagMin)+'분(상류 서명)');
+  // 원인은 시간차로 미루어 짐작하는 것이라 '추정'을 명시(확정 아님)
+  if(ll&&ll.lead==='bf') evid.push('행주 선행 '+ll.lagMin+'분(조석 영향 추정)');
+  else if(ll&&ll.lead==='hg') evid.push('한강대교 선행 '+Math.abs(ll.lagMin)+'분(방류 영향 추정)');
   var verdict, cls;
   if(bf.dir==='up' && (ph==='flood'||ph==null)){
     cls='up'; verdict='🔺 역류 경향 · 바다→한강(상류)';
     if(hg&&hg.dir==='up') verdict='🔺 역류 경향 · 바다→한강(상류, 여의도까지)';
-    if(ll&&ll.lead==='hg') verdict+=' · 상류(방류) 영향 가능';   // 시간차가 반대 서명이면 단정 낮춤
+    if(ll&&ll.lead==='hg') verdict+=' · 상류(방류) 영향 가능';   // 시간차가 반대 방향이면 단정 낮춤
   } else if(bf.dir==='down' && (ph==='ebb'||ph==null)){
     cls='down'; verdict='🔻 순류 · 한강→바다(하류)';
   } else {
@@ -806,6 +811,24 @@ function renderFlow(){
   }
   badge.className='flowbadge '+cls;
   badge.innerHTML=verdict+'<span class="sub">'+evid.join(' · ')+'</span>';
+  setFlowDiag(ll);
+}
+// 관리자 전용 진단줄: 판정에 쓴 원시 수치를 그대로 노출(실제 역류 목격 시 캡처 → 임계값 보정 근거)
+function setFlowDiag(ll){
+  var el=$('flowDiag'); if(!el) return;
+  var bf=flow.bf, hg=flow.hg;
+  if(!bf&&!hg){ el.textContent=''; return; }
+  var sgn=function(v){ return (v>0?'+':'')+v; };
+  var p=['진단'];
+  if(bf) p.push('행주 '+sgn(bf.rate)+'cm/h('+bf.mins+'분·'+bf.pts+'점)');
+  if(hg) p.push('한강대교 '+sgn(hg.rate)+'cm/h('+hg.mins+'분·'+hg.pts+'점)');
+  p.push('임계 ±'+FLOW.deadRate+'cm/h');
+  if(ll) p.push('선행 '+(ll.lead==='bf'?'행주':ll.lead==='hg'?'한강대교':'—')+' '+sgn(ll.lagMin)+'분'+
+    ' · 상관 '+ll.corr.toFixed(2)+' · 진폭 '+ll.ampCm+'cm · '+ll.cnt+'쌍'+
+    (ll.lead==='unknown'?' → 보류(진폭<'+FLOW.minAmpCm+' 또는 상관<'+FLOW.minCorr+')':''));
+  else p.push('선행 계산 불가(데이터 부족)');
+  p.push('위상 '+(flow.tide==='flood'?'밀물':flow.tide==='ebb'?'썰물':'—'));
+  el.textContent=p.join(' · ');
 }
 
 /* ----- 물때 (KHOA 조석예보 고저조, data.go.kr · CORS 허용, 브라우저 직접 호출) ----- */
@@ -1033,7 +1056,9 @@ if($('toggleScene')) $('toggleScene').onclick=function(e){ e.preventDefault();
 
 /* ----- 설정 잠금 (비밀 URL ?admin · 제목 5회 탭) ----- */
 function adminUnlocked(){ return store.get('hb_admin','')==='1'; }
-function applyAdmin(){ var p=$('setPanel'); if(p) p.style.display=adminUnlocked()?'':'none'; }
+function applyAdmin(){ var on=adminUnlocked();
+  var p=$('setPanel'); if(p) p.style.display=on?'':'none';
+  var d=$('flowDiag'); if(d) d.style.display=on?'':'none'; }   // 역류 진단줄도 관리자에게만
 if(/[?&#]admin(\b|=|$)/i.test(location.href)) store.set('hb_admin','1');  // 비밀 URL로 열면 그 기기에 기억
 (function(){
   var h1=document.querySelector('h1'); if(!h1) return;
