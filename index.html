@@ -703,18 +703,29 @@ function renderWL(rows, sumId, fullId, tId){
   if(latest){ var label='갱신 '+ymdhmToStr(latest), age=ymdhmAgeMin(latest);
     if(age!=null){ label+=' · '+ageStr(age); if(age>=STALE_MIN){tEl.className='t stale';label+=' ⚠';} else tEl.className='t'; }
     tEl.textContent=label; }
-  var key = sumId==='bfRows'?'bf':(sumId==='hgRows'?'hg':null);  // 역류 판정용 추세 저장
-  if(key){ flow[key]=wlTrend(rows); renderFlow(); }
+  var key = sumId==='bfRows'?'bf':(sumId==='hgRows'?'hg':null);  // 역류 판정용 추세·시계열 저장
+  if(key){ flow[key]=wlTrend(rows); flow[key+'Rows']=rows; renderFlow(); }   // rows는 시간차 교차검증에 씀
 }
 
 /* ----- 한강 역류/순류 판정 (수위 추세 + 인천 조위 위상 교차검증) ----- */
-var FLOW={ winMin:30, deadCm:2 };   // 추세 계산 구간(분)·정체 판정 폭(cm) — 실측 후 보정
-var flow={ bf:null, hg:null, tide:null };   // 각 fetch가 자기 조각 저장 → renderFlow가 합침
-function wlTrend(rows){   // rows: 최신순 10분 간격 {ymdhm,wl} → 최근 winMin 변화량
+var FLOW={ winMin:40, deadRate:4,          // 추세: 최근 40분 기울기, ±4cm/h 미만은 정체 — 실측 후 보정
+  corrMin:180, maxLagMin:60, minCorr:0.5, minAmpCm:5, minPts:8 };  // 시간차 교차검증(3시간 구간, ±60분 탐색)
+var flow={ bf:null, hg:null, bfRows:null, hgRows:null, tide:null };  // 각 fetch가 자기 조각 저장 → renderFlow가 합침
+// 최근 winMin 구간의 최소제곱 기울기(cm/h). 2점 차분과 달리 끝값 하나가 튀어도 잘 흔들리지 않음.
+function wlTrend(rows){   // rows: 최신순 {ymdhm,wl}
   if(!rows||rows.length<2) return null;
-  var k=Math.round(FLOW.winMin/10); if(k>=rows.length) k=rows.length-1;
-  var dCm=Math.round((rows[0].wl-rows[k].wl)*100);
-  return { dCm:dCm, dir: dCm>=FLOW.deadCm?'up' : dCm<=-FLOW.deadCm?'down' : 'flat' };
+  var t1=ymdhmToMs(rows[0].ymdhm); if(t1==null) return null;
+  var lim=t1-FLOW.winMin*60000, xs=[], ys=[], i, t;
+  for(i=0;i<rows.length;i++){ t=ymdhmToMs(rows[i].ymdhm);
+    if(t==null||t<lim) break;
+    xs.push((t-t1)/3600000); ys.push(rows[i].wl); }   // x: 시각(시간 단위, 과거가 음수), y: 수위(m)
+  if(xs.length<2) return null;
+  var n=xs.length, sx=0, sy=0, sxx=0, sxy=0;
+  for(i=0;i<n;i++){ sx+=xs[i]; sy+=ys[i]; sxx+=xs[i]*xs[i]; sxy+=xs[i]*ys[i]; }
+  var den=n*sxx-sx*sx; if(!den) return null;
+  var rate=Math.round((n*sxy-sx*sy)/den*100);         // 기울기 → cm/h
+  return { rate:rate, dCm:Math.round((ys[0]-ys[n-1])*100), mins:Math.round(-xs[n-1]*60), pts:n,
+    dir: rate>=FLOW.deadRate?'up' : rate<=-FLOW.deadRate?'down' : 'flat' };
 }
 function tidePhaseNow(list){   // 오늘 고저조 → 현재 밀물(flood)/썰물(ebb)
   if(!list||!list.length) return null;
@@ -724,11 +735,47 @@ function tidePhaseNow(list){   // 오늘 고저조 → 현재 밀물(flood)/썰�
   for(var i=0;i<s.length;i++){ if(s[i].hm>now) return s[i].high?'flood':'ebb'; }  // 다음 극값: 고조=밀물
   return s[s.length-1].high?'ebb':'flood';   // 오늘 극값 다 지남: 고조 뒤=썰물
 }
-function trendArrow(t){
+// 두 관측소 중 '누가 먼저' 움직였나 — 1차 차분(움직임)만 10분 격자로 교차상관.
+// 조석(역류)은 바다 쪽 행주가 먼저 → 한강대교가 나중. 팔당댐 방류는 상류 한강대교가 먼저 → 행주가 나중.
+// 차분을 쓰므로 두 관측소의 영점(gdt) 차이·기준선 이동은 자동으로 상쇄됨.
+function leadLag(aRows, bRows){   // a=행주, b=한강대교 (둘 다 최신순)
+  if(!aRows||!aRows.length||!bRows||!bRows.length) return null;
+  var t1=Math.min(ymdhmToMs(aRows[0].ymdhm), ymdhmToMs(bRows[0].ymdhm));
+  if(!t1) return null;
+  var step=600000, n=Math.round(FLOW.corrMin/10)+1, i, j, L;
+  var grid=function(rows){ var m={}, g=[], v, q;                 // 공통 10분 격자(과거→최신), 결측은 null
+    for(q=0;q<rows.length;q++) m[ymdhmToMs(rows[q].ymdhm)]=rows[q].wl;
+    for(q=n-1;q>=0;q--){ v=m[t1-q*step]; g.push(v==null?null:v); }
+    return g; };
+  var diff=function(g){ var o=[], q;                              // 1차 차분 = 10분간 움직임
+    for(q=1;q<g.length;q++) o.push((g[q]==null||g[q-1]==null)?null:g[q]-g[q-1]);
+    return o; };
+  var rng=function(g){ var mn=null, mx=null, q;                   // 구간 진폭(cm) — 움직임이 있어야 판정 의미
+    for(q=0;q<g.length;q++){ if(g[q]==null) continue;
+      if(mn==null||g[q]<mn) mn=g[q]; if(mx==null||g[q]>mx) mx=g[q]; }
+    return mn==null?0:(mx-mn)*100; };
+  var A=grid(aRows), B=grid(bRows), da=diff(A), db=diff(B);
+  var ampCm=Math.max(rng(A), rng(B)), maxL=Math.round(FLOW.maxLagMin/10), best=null;
+  for(L=-maxL;L<=maxL;L++){                                       // L>0 = 한강대교가 L칸 뒤에 따라옴 = 행주 선행
+    var sab=0, saa=0, sbb=0, cnt=0;
+    for(i=0;i<da.length;i++){ j=i+L;
+      if(j<0||j>=db.length||da[i]==null||db[j]==null) continue;
+      sab+=da[i]*db[j]; saa+=da[i]*da[i]; sbb+=db[j]*db[j]; cnt++; }
+    if(cnt<FLOW.minPts||saa<=0||sbb<=0) continue;
+    var c=sab/Math.sqrt(saa*sbb);                                 // 정규화 상관계수(-1~1)
+    if(!best||c>best.corr) best={corr:c, lagMin:L*10, cnt:cnt};
+  }
+  if(!best) return null;
+  best.ampCm=Math.round(ampCm);
+  best.lead=(ampCm<FLOW.minAmpCm||best.corr<FLOW.minCorr) ? 'unknown'   // 잔잔하거나 상관 약하면 판정 보류
+    : best.lagMin>0 ? 'bf' : best.lagMin<0 ? 'hg' : 'tie';
+  return best;
+}
+function trendArrow(t){   // 기울기(cm/h)로 표시 — 두 다리를 같은 잣대로 비교 가능
   if(!t) return {txt:'', cls:''};
-  if(t.dir==='up')   return {txt:'↑ +'+t.dCm+'cm', cls:'up'};
-  if(t.dir==='down') return {txt:'↓ '+Math.abs(t.dCm)+'cm', cls:'down'};
-  return {txt:'↔ 0cm', cls:'flat'};
+  if(t.dir==='up')   return {txt:'↑ '+t.rate+'cm/h', cls:'up'};
+  if(t.dir==='down') return {txt:'↓ '+Math.abs(t.rate)+'cm/h', cls:'down'};
+  return {txt:'↔ '+Math.abs(t.rate)+'cm/h', cls:'flat'};
 }
 function renderFlow(){
   var badge=$('flowBadge'); if(!badge) return;
@@ -740,14 +787,18 @@ function renderFlow(){
   if(!bf){ badge.className='flowbadge off';
     badge.textContent=(typeof G!=='undefined'&&G.mode==='manual')?'역류 판정은 자동 모드에서 표시됩니다':'수위 불러오는 중…';
     return; }
+  var ll=leadLag(flow.bfRows, flow.hgRows);   // 누가 먼저 움직였나(조석 서명 vs 상류 서명)
   var evid=[];
   if(ph) evid.push('인천 '+(ph==='flood'?'밀물':'썰물'));
   evid.push('행주 '+(bf.dir==='up'?'↑':bf.dir==='down'?'↓':'↔'));
   if(hg) evid.push('한강대교 '+(hg.dir==='up'?'↑':hg.dir==='down'?'↓':'↔'));
+  if(ll&&ll.lead==='bf') evid.push('행주 선행 '+ll.lagMin+'분(조석 서명)');
+  else if(ll&&ll.lead==='hg') evid.push('한강대교 선행 '+Math.abs(ll.lagMin)+'분(상류 서명)');
   var verdict, cls;
   if(bf.dir==='up' && (ph==='flood'||ph==null)){
     cls='up'; verdict='🔺 역류 경향 · 바다→한강(상류)';
     if(hg&&hg.dir==='up') verdict='🔺 역류 경향 · 바다→한강(상류, 여의도까지)';
+    if(ll&&ll.lead==='hg') verdict+=' · 상류(방류) 영향 가능';   // 시간차가 반대 서명이면 단정 낮춤
   } else if(bf.dir==='down' && (ph==='ebb'||ph==null)){
     cls='down'; verdict='🔻 순류 · 한강→바다(하류)';
   } else {
@@ -911,7 +962,7 @@ function applyModeUI(){
   if(wn) wn.textContent = G.mode==='manual'
     ? '한강 수위(행주·한강대교)는 자동 모드에서만 조회됩니다.'
     : '※ 역류 판정을 위한 참고 정보이며 개선 중입니다.';
-  if(G.mode==='manual'){ flow.bf=null; flow.hg=null; }  // 수동 모드는 수위 미조회 → 배지 비활성
+  if(G.mode==='manual'){ flow.bf=null; flow.hg=null; flow.bfRows=null; flow.hgRows=null; }  // 수동 모드는 수위 미조회 → 배지 비활성
   renderFlow();
 }
 function setMode(m){G.mode=m;store.set('hb_mode',m);applyModeUI();setupTimer();if(m==='auto')fetchAll();}
