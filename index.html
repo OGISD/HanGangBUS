@@ -615,7 +615,7 @@ function fetchAll(){
 /* ----- 팔당댐 방류량 (HRFCO 댐 API, 수위와 같은 키 사용) ----- */
 var DAM={code:"1017310", lagMin:240, winMin:30,  // 팔당→여의도 도달 약 4시간, 표시창 30분(3회분)
   noGoFlow:3000,   // 이 방류량(㎥/s) 이상이면 운항금지 (회사 확인값)
-  warnFlow:null};  // 주의선 — 회사 확인 대기(2026-07-06 예정). 숫자를 넣으면 주황 '주의' 단계 활성화
+  warnFlow:null};  // 주의선 — 회사값 없음으로 확정(2026-07-07). 숫자를 넣으면 주황 '주의' 단계 활성화
 // 열별 최신 방류량을 절대값 기준으로 분류
 function damLevel(v){ if(v==null||isNaN(v))return null;
   if(v>=DAM.noGoFlow)return 'nogo';

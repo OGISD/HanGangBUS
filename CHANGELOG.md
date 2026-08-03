@@ -6,6 +6,11 @@
 
 ## [Unreleased]
 
+### Changed (2026-08-03, 인수인계 문서 정합성 정리)
+- 실제 코드 기준으로 README와 인수인계 문서의 오래된 설명을 정리: 역류 판정 v2 임계값(40분·4cm/h),
+  물때 API CORS 장애·연간표 백업, 교량 저장키 `hb_bridges7`, 미사용 출몰시각, 정적 JSON 파일 구조 반영.
+- `AI_HANDOFF.md`를 현재 상태 중심으로 축약하고, 과거 상세 이력은 `CHANGELOG.md`를 기준으로 보존.
+
 ### Added (2026-08-03, 물때 API 장애 백업)
 - 공공데이터포털 물때 API를 우선 사용하되, CORS/통신 장애 시 **국립해양조사원 연간 조석표 JSON으로 자동 전환**.
 - 인천 `DT_0001` 조석표를 `data/tide-incheon-2026.json`(8~12월)·`data/tide-incheon-2027.json`(전체)으로 분리해
