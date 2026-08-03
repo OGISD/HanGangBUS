@@ -275,7 +275,7 @@
       <div class="chead"><span class="nm">인천 물때</span><span class="t" id="incheonT">—</span></div>
       <div class="trows" id="incheonRows"><div class="trow"><span class="tv">—</span></div></div>
       <div class="tcur" id="tideCur" style="display:none">
-        <span class="lbl" title="오늘 예측 최고 유속을 기준값과 비교한 상대 지표">조류세기(상대)</span>
+        <span class="lbl" title="오늘 예측 최고 유속으로 계산한 물살 세기">조류세기</span>
         <span class="bar"><span class="fill" id="tideCurFill"></span></span>
         <span class="pct"><b id="tideCurSpd">—</b>%</span>
       </div>
@@ -383,8 +383,8 @@
       <div class="q">물때(만조·간조)는 어떻게 보나요?</div>
       <div class="a"><b>인천</b> 칸은 오늘 만조·간조를 모두, <b>여의도</b> 칸은 인천 만조 시각을 <b>약 4시간 뒤로 옮긴 추정값</b>으로 만조만 보여 줍니다. 실제 시각은 기상·유량 등에 따라 달라질 수 있습니다. 각 줄에 <b>▲만조/▼간조</b> 화살표와 <b>직전 물때 대비 증감</b>(cm, 내려가면 음수)을 함께 표시합니다. 카드 오른쪽 위의 <b>온라인</b>은 공공 API 조석예보, <b>연간표</b>는 API 장애 때 사용하는 국립해양조사원 연간 조석표입니다.</div>
 
-      <div class="q">‘조류세기(상대)’는 뭔가요?</div>
-      <div class="a">오늘 물살(조류)이 센 편인지 약한 편인지를 <b>상대적인 %</b>로 나타낸 값입니다. 국립해양조사원(KHOA) 수치조류도 예측 유속에서 <b>오늘 하루 중 가장 빠른 유속</b>을 골라 내부 기준값과 비교합니다. 절대적인 안전 비율이 아니며, 실제 사용 결과에 따라 표시 방식은 조정하거나 되돌릴 수 있습니다.</div>
+      <div class="q">‘조류세기’는 뭔가요?</div>
+      <div class="a">국립해양조사원(KHOA) 수치조류도 예측 유속에서 <b>오늘 하루 중 가장 빠른 유속</b>을 골라 %로 환산한 물살 세기입니다. 예측을 보기 쉽게 만든 참고값이며, 운항 안전 비율을 뜻하지는 않습니다.</div>
 
       <div class="q">“갱신 HH:MM · N분 전”은?</div>
       <div class="a">데이터가 관측된 시각과 지금까지의 경과시간입니다. <b>30분</b>이 넘으면 빨간 ⚠로 바뀌어 ‘오래된 값’임을 알려 줍니다.</div>
@@ -868,8 +868,8 @@ function setFlowDiag(ll){
 
 /* ----- 물때 (KHOA 조석예보 고저조 · API 우선, 연간 조석표 자동 백업) ----- */
 var TIDE={ incheon:"DT_0001", lagMin:240 };  // 여의도 만조 추정 = 인천 만조 시각 약 +4시간(240분)
-// 조류세기: KHOA 수치조류도 예측 유속(cm/s)·유향. 인천 지점 최근접 격자값을 상대 지표로 표시.
-// 조류세기(상대) = 하루 여러 시각 중 인천 최고 예측 유속을 maxSpeed 대비 %로.
+// 조류세기: KHOA 수치조류도 예측 유속(cm/s)·유향. 인천 지점 최근접 격자값으로 오늘의 물살 세기를 계산.
+// 조류세기 = 하루 여러 시각 중 인천 최고 예측 유속을 maxSpeed 대비 %로 환산.
 // maxSpeed 125는 오늘(최고 74cm/s)이 59%가 되도록 보정한 값(사리~조금에 따라 %가 오르내림).
 var TIDECUR={ lat:37.451, lon:126.592, maxSpeed:125, hours:[0,3,6,9,12,15,18,21] };
 var TIDE_RETRY_MS=30*60000, tideApiRetryAt=0;
@@ -1022,7 +1022,7 @@ function fetchTideCur(){
 function renderTideCur(pct,partial){
   $('tideCurFill').style.width=Math.max(2,pct)+'%';  // 막대는 최소 2%는 보이게
   $('tideCurSpd').textContent=pct;                    // 하루 세기 %(막대 채움과 동일)
-  $('tideCur').title=partial?'일부 시각의 예측값만 반영됨 · 다음 새로고침에서 재시도':'오늘 예측 최고 유속을 기준값과 비교한 상대 지표';
+  $('tideCur').title=partial?'일부 시각의 예측값만 반영됨 · 다음 새로고침에서 재시도':'오늘 예측 최고 유속으로 계산한 물살 세기';
   $('tideCur').style.display='flex';
 }
 
