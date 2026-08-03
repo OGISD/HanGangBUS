@@ -22,6 +22,7 @@
 - PWA 홈 화면 바로가기, 데이터 신선도 경고, 면책 문구, 관리자 진단줄
 - 도움말 Q&A 아래 접이식 `운항 참고사항`: 썰물 때 행주대교 부근 정조와 마곡의 일시적 상류 방향 흐름 안내
 - 앱 로직은 `index.html`, 큰 정적 물때 자료만 `data/*.json`으로 분리
+- 라이브 제작자 표기: `오동근, Claude·GPT와 함께`; 상세 역할은 `CONTRIBUTORS.md`
 - `v0.7.0` 이후 승인된 안정화: 운항금지선 `<=`, API 최대 대기시간, 숨김 탭 호출 중지, 물때 30분 재시도,
   조류예측 일부 응답 캐시 방지, 유지보수 정리, 자동검사
 
@@ -88,6 +89,7 @@
 - `data/tide-incheon-2026.json`, `data/tide-incheon-2027.json`: 물때 장애 백업
 - `tools/convert-tide.ps1`: 월별 조석표 ZIP 검증·변환
 - `tools/check-project.ps1`: 코드·확정값·조석표 무결성 검사
+- `CONTRIBUTORS.md`: 기획·제작, AI 협업, 현장 자문 참여자
 - `.github/workflows/check.yml`: push·PR 자동검사
 - `AGENTS.md`: Codex 작업 규칙과 핵심값
 - `CLAUDE.md`: 상세 기술 사양

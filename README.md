@@ -26,6 +26,11 @@
 - `AI_HANDOFF.md` — 새 작업 세션 인수인계
 - `CLAUDE.md` — 상세 기술 사양과 확정값
 - `TASKS.md` — 작업 현황
+- `CONTRIBUTORS.md` — 기획·제작, AI 협업, 현장 자문 참여자
+
+## 참여자
+
+기획·제작자와 AI 협업, 현장 자문 참여자는 [CONTRIBUTORS.md](CONTRIBUTORS.md)에 정리되어 있습니다.
 
 HRFCO가 해외 IP 요청을 차단하므로 Cloudflare Worker 같은 해외 프록시를 현재 구조에 사용하면 안 됩니다.
 

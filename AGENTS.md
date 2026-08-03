@@ -96,6 +96,7 @@
 - `CHANGELOG.md`: 변경 이력
 - `RULES.md`: 프로젝트 작업 규칙
 - `PRD.md`: 제품 요구사항
+- `CONTRIBUTORS.md`: 기획·제작, AI 협업, 현장 자문 참여자
 
 ## 현재 다음 할 일
 

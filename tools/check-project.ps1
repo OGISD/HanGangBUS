@@ -28,6 +28,7 @@ $htmlPath = Join-Path $root 'index.html'
 $html = Get-Content -LiteralPath $htmlPath -Raw -Encoding utf8
 $agents = Get-Content -LiteralPath (Join-Path $root 'AGENTS.md') -Raw -Encoding utf8
 $claude = Get-Content -LiteralPath (Join-Path $root 'CLAUDE.md') -Raw -Encoding utf8
+$contributors = Get-Content -LiteralPath (Join-Path $root 'CONTRIBUTORS.md') -Raw -Encoding utf8
 $manifest = Get-Content -LiteralPath (Join-Path $root 'manifest.webmanifest') -Raw -Encoding utf8
 
 # 안전 판정과 확정 상수
@@ -48,6 +49,8 @@ Require-Match $html 'TIDE_BACKUP_TEMPLATE: "data/tide-incheon-\{year\}\.json"' '
 Require-Match $html 'anchor=tideBackupLast\(prevYmd\)' '첫 물때 증감의 전날 연간표 보충이 유지됨'
 Require-Match $html 'if\(!partial\) try\{ store\.set\(''hb_tidecur''' '조류예측 일부 응답은 하루 캐시에 저장하지 않음'
 Require-NoMatch $html '조류세기\(상대\)' '조류세기 상대지표 표기가 다시 노출되지 않음'
+Require-Match $html '오동근, Claude·GPT와 함께' '라이브 제작자 표기에 Claude와 GPT가 함께 표시됨'
+Require-Match $contributors 'Claude \(Anthropic\)[\s\S]+GPT \(OpenAI Codex\)' 'CONTRIBUTORS.md에 Claude와 GPT 역할이 기록됨'
 Require-Match $html 'visibilitychange' '숨긴 페이지의 자동 호출 중지·복귀 처리가 있음'
 Require-NoMatch $html 'allorigins|ENDPOINT_TEMPLATE|useProxy|proxyUrl|fetchRiseSet|RISESET_ENDPOINT' '폐기된 해외 프록시·출몰시각 코드가 없음'
 Require-NoMatch $html '<link[^>]+stylesheet[^>]+https?://' '첫 화면이 외부 글꼴에 의존하지 않음'
