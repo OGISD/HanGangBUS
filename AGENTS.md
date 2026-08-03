@@ -29,7 +29,7 @@
 - 저장소: https://github.com/OGISD/HanGangBUS
 - 브랜치: `main`
 - 배포: `git push` 후 GitHub Pages 자동 반영
-- 현재 확정 기준점: `v0.6.0`(2026-07-27)
+- 현재 확정 기준점: `v0.7.0`(2026-08-03)
 
 ## 핵심 통과높이 공식
 

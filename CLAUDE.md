@@ -17,6 +17,7 @@
 - **공개 주소**: https://ogisd.github.io/HanGangBUS/
 - **저장소**: https://github.com/OGISD/HanGangBUS (GitHub 계정 OGISD)
 - **호스팅**: GitHub Pages (`main` 브랜치).
+- **현재 릴리스 기준점**: `v0.7.0`(2026-08-03) — 역류 판정 v2, 물때 연간표 백업, 운항 참고사항.
 - **로컬 폴더가 git 저장소임.** (2026-06-22 연결 완료) `origin` = OGISD/HanGangBUS,
   `main` 추적. 수정 반영은 `git add -A && git commit && git push` → Pages 자동 재배포.
   (예전 "웹에서 전체 복붙" 방식은 더 이상 안 씀.)

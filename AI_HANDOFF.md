@@ -10,7 +10,7 @@
 - 공개 주소: https://ogisd.github.io/HanGangBUS/
 - 저장소: https://github.com/OGISD/HanGangBUS
 - 배포: `main` 브랜치 push → GitHub Pages 자동 반영
-- 최신 태그: `v0.6.0`(2026-07-27), 이후 변경은 `CHANGELOG.md`의 Unreleased에 기록
+- 최신 태그: `v0.7.0`(2026-08-03), 이후 변경은 `CHANGELOG.md`의 Unreleased에 기록
 
 ## 현재 구현 상태
 
@@ -23,7 +23,7 @@
 - 도움말 Q&A 아래 접이식 `운항 참고사항`: 썰물 때 행주대교 부근 정조와 마곡의 일시적 상류 방향 흐름 안내
 - 앱 로직은 `index.html`, 큰 정적 물때 자료만 `data/*.json`으로 분리
 
-## 2026-08-03 최신 변경: 물때 API 장애 백업
+## 2026-08-03 v0.7.0 주요 변경: 물때 API 장애 백업
 
 - data.go.kr 물때 API가 브라우저 Origin 요청에 403/CORS를 반환한 사례를 확인함.
 - 공공 API를 계속 우선 호출하고, 실패하면 같은 GitHub Pages의 연간 조석표 JSON으로 자동 전환함.
