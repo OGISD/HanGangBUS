@@ -132,11 +132,16 @@
 - **카드 순서(화이트보드)**: 팔당댐 → 잠수교 → 여의도물때 → 행주대교 → 인천물때.
   구현: 물때 카드는 `#cards` 안 정적 HTML, `buildCards()`가 교량 카드(`.card[data-id]`)만 지우고
   잠수교는 여의도 앞·나머지 교량은 인천 앞에 삽입. (교량 추가 시 이 삽입 규칙 확인 필요)
-- 예보값이라 신선도 경고 없음(대신 "MM/DD 예보" 표기). **수동 모드에서도 표시**(예보라 실시간 무관).
+- 예보값이라 신선도 경고 없음. **수동 모드에서도 표시**(예보라 실시간 무관).
+- **API 장애 자동 백업(2026-08-03)**: data.go.kr 물때 API를 우선 호출하되 CORS/통신/형식 오류가 나면
+  `data/tide-incheon-{year}.json`의 오늘 인천 조석표로 자동 전환. 2026년은 8~12월, 2027년은 1~12월 내장.
+  백업은 같은 GitHub Pages 출처라 CORS 영향 없음. API 실패값은 캐시하지 않아 10분 새로고침 때 재시도하며,
+  복구되면 자동으로 API 자료로 돌아간다. 카드 우측 기존 날짜 영역에 **`MM/DD · API`/`MM/DD · 연간표`**로 표시해
+  출처를 구분하고 세로 공간은 늘리지 않음. 둘 다 예보이며 `실시간`이라는 표현은 사용하지 않는다.
 - **하루 1번만 조회·캐시(2026-07-15 최적화)**: 고저조는 하루치 고정 예보(API가 항상 '오늘'만 줌)라 매 새로고침
   재요청은 낭비였음 → `hb_tide`(localStorage, {ymd,list})에 캐시. 조류세기(`hb_tidecur`)와 동일 패턴. 캐시 히트 시
   `renderTide(list)`만 다시 돌려 화면·역류 위상(`tidePhaseNow`, 시각 기반) 갱신 → **네트워크 0**. 실패는 캐시 안 함(다음 새로고침 재시도).
-- 관련 코드: `TIDE` 상수(incheon DT_0001, lagMin 240), `fetchTide()/renderTide()/addMin()/tideFail()`.
+- 관련 코드: `TIDE` 상수(incheon DT_0001, lagMin 240), `fetchTide()/fetchTideBackup()/renderTide()/addMin()/tideFail()`.
   `fetchAll()` 및 init(수동 모드)에서 호출. XML→`DOMParser` 파싱.
 - **일출·일몰·월출·월몰 — ❌ 현재 없는 기능(2026-07-15 정정)**: 2026-07-06에 인천 카드에 넣었다가,
   **2026-07-07 조류세기로 교체되면서 제거됨**. 지금은 **`#sunMoon` HTML이 아예 없고 `fetchRiseSet()`도
@@ -197,7 +202,9 @@
     대표하는지 검증 전에는 도입 보류.
 
 ## 파일 구조
-- `index.html` — 웹앱 전체(단일 파일). 실제 배포물.
+- `index.html` — 웹앱 로직·UI 전체. 실제 배포 진입점.
+- `data/tide-incheon-2026.json`, `data/tide-incheon-2027.json` — API 장애 시 쓰는 인천 연간 조석표 정적 백업.
+- `tools/convert-tide.ps1` — 국립해양조사원 월별 텍스트 ZIP을 검증해 연도별 JSON으로 변환. 원본 텍스트는 미커밋.
 - `hrfco-proxy-worker.js` — (사용 안 함) 폐기된 Cloudflare Worker. 삭제해도 무방.
 - **AI Development OS 문서** (2026-07-04 적용): `PRD.md`(요구사항) · `TASKS.md`(작업 추적) ·
   `RULES.md`(작업 규칙·원격 저장소 규칙) · `AI_HANDOFF.md`(세션 인수인계) · `CHANGELOG.md`(변경 이력).
