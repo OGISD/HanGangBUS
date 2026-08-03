@@ -379,7 +379,7 @@
         · <b>‘행주 선행 N분’</b> — 두 다리 중 <b>어느 쪽이 먼저 움직였는지</b>입니다. 바다에 가까운 <b>행주가 먼저</b> 움직였으면 바닷물(조석) 때문일 가능성이, 상류의 <b>한강대교가 먼저</b>면 팔당댐 <b>방류</b> 때문일 가능성이 큽니다. 다만 시간차로 미루어 짐작한 것이라 <b>‘추정’</b>이라고 적습니다. 물이 잔잔할 때는 이 항목이 아예 나오지 않습니다.</div>
 
       <div class="q">물때(만조·간조)는 어떻게 보나요?</div>
-      <div class="a"><b>인천</b> 칸은 오늘 만조·간조를 모두, <b>여의도</b> 칸은 <b>인천 만조 +4시간</b>(방류수가 여의도에 도달하는 시간)으로 만조만 보여 줍니다. 각 줄에 <b>▲만조/▼간조</b> 화살표와 <b>직전 물때 대비 증감</b>(cm, 내려가면 음수)을 함께 표시합니다. 카드 오른쪽 위의 <b>API</b>는 온라인 조석예보, <b>연간표</b>는 API 장애 때 사용하는 국립해양조사원 연간 조석표입니다.</div>
+      <div class="a"><b>인천</b> 칸은 오늘 만조·간조를 모두, <b>여의도</b> 칸은 <b>인천 만조 +4시간</b>(방류수가 여의도에 도달하는 시간)으로 만조만 보여 줍니다. 각 줄에 <b>▲만조/▼간조</b> 화살표와 <b>직전 물때 대비 증감</b>(cm, 내려가면 음수)을 함께 표시합니다. 카드 오른쪽 위의 <b>온라인</b>은 공공 API 조석예보, <b>연간표</b>는 API 장애 때 사용하는 국립해양조사원 연간 조석표입니다.</div>
 
       <div class="q">‘조류세기’는 뭔가요?</div>
       <div class="a">오늘 물살(조류)이 센 편인지 약한 편인지를 <b>%</b>로 나타낸 값입니다. 국립해양조사원(KHOA) 수치조류도 예측 유속에서 <b>오늘 하루 중 가장 빠른 유속</b>을 골라 환산합니다. 사리(대조) 때 세고 조금(소조) 때 약합니다. 예측값이니 참고만 하세요.</div>
@@ -943,7 +943,7 @@ function renderTide(list,source){
   $('yeouidoRows').innerHTML=sorted.filter(function(e){return e.high;}).map(function(e){ var r=addMin(e.hm,TIDE.lagMin); return tideRow(r.hm, e, r.nextDay); }).join('') || '<div class="trow"><span class="tv">오늘 만조 정보 없음</span></div>';
   var dstr=ymd?(ymd.slice(5,7)+'/'+ymd.slice(8,10)):'';
   ['incheonT','yeouidoT'].forEach(function(id){var el=$(id);if(!el)return;
-    el.textContent=dstr+' · '+(source==='table'?'연간표':'API');
+    el.textContent=dstr+' · '+(source==='table'?'연간표':'온라인');
     el.className='t'+(source==='table'?' backup':'');
     el.title=source==='table'?'API 연결 실패로 내장 연간 조석표 사용 중':'공공 API 조석예보 사용 중';
   });

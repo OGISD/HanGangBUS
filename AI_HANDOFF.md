@@ -33,7 +33,7 @@
 - **물때 API 장애 백업 (2026-08-03)**: data.go.kr 물때 API가 브라우저 Origin 요청을 403/CORS로 차단한 사례에 대응.
   API를 계속 우선 사용하되 실패하면 같은 GitHub Pages의 연간 조석표 JSON으로 자동 전환한다.
   `data/tide-incheon-2026.json`은 8~12월 153일, `data/tide-incheon-2027.json`은 전체 365일이며 원본 텍스트는 미포함.
-  카드 기존 날짜 자리에 `MM/DD · API`/`MM/DD · 연간표`로 출처 표시(세로 공간 추가 없음). 백업값도 `renderTide`와
+  카드 기존 날짜 자리에 `MM/DD · 온라인`/`MM/DD · 연간표`로 출처 표시(세로 공간 추가 없음). 백업값도 `renderTide`와
   `tidePhaseNow`를 그대로 거쳐 여의도 +4시간·역류 위상에 반영. `tools/convert-tide.ps1`로 월별 ZIP을 재생성 가능.
 
 - **Q&A 점검·보강 (2026-07-27)**: 전 항목을 코드값과 대조 → **오류 없음**(7.3/7.8/9.1·10.9·base·3000·30분 등 일치).
