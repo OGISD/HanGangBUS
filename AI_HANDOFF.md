@@ -11,6 +11,7 @@
 - 저장소: https://github.com/OGISD/HanGangBUS
 - 배포: `main` 브랜치 push → GitHub Pages 자동 반영
 - 최신 태그: `v0.7.0`(2026-08-03), 이후 변경은 `CHANGELOG.md`의 Unreleased에 기록
+- Codex가 실질적으로 참여한 커밋은 `Co-authored-by: Codex <codex@openai.com>`으로 공식 GitHub 계정에 연결
 
 ## 현재 구현 상태
 

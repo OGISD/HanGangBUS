@@ -6,6 +6,10 @@
 
 ## [Unreleased]
 
+### Changed (2026-08-03, GitHub 기여자 연결)
+- Codex가 실제 변경에 참여한 커밋에 `Co-authored-by: Codex <codex@openai.com>`을 사용하도록 규칙화해
+  GitHub 저장소 Contributors 목록에서도 공식 `codex` 계정으로 표시되도록 정리.
+
 ### Added (2026-08-03, 참여자 표기)
 - `CONTRIBUTORS.md`를 추가해 오동근의 기획·제작, Claude·GPT의 AI 협업, 현장 자문·실측 참여자를 역할별로 정리.
 - 라이브 헤더의 어색한 `오동근 (with 클로드)`를 `오동근, Claude·GPT와 함께`로 바꾸고 도움말 표기도 통일.

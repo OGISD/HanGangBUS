@@ -51,6 +51,7 @@ Require-Match $html 'if\(!partial\) try\{ store\.set\(''hb_tidecur''' '조류예
 Require-NoMatch $html '조류세기\(상대\)' '조류세기 상대지표 표기가 다시 노출되지 않음'
 Require-Match $html '오동근, Claude·GPT와 함께' '라이브 제작자 표기에 Claude와 GPT가 함께 표시됨'
 Require-Match $contributors 'Claude \(Anthropic\)[\s\S]+GPT \(OpenAI Codex\)' 'CONTRIBUTORS.md에 Claude와 GPT 역할이 기록됨'
+Require-Match $agents 'Co-authored-by: Codex <codex@openai\.com>' 'Codex 참여 커밋의 공식 GitHub 공동 작성자 규칙이 기록됨'
 Require-Match $html 'visibilitychange' '숨긴 페이지의 자동 호출 중지·복귀 처리가 있음'
 Require-NoMatch $html 'allorigins|ENDPOINT_TEMPLATE|useProxy|proxyUrl|fetchRiseSet|RISESET_ENDPOINT' '폐기된 해외 프록시·출몰시각 코드가 없음'
 Require-NoMatch $html '<link[^>]+stylesheet[^>]+https?://' '첫 화면이 외부 글꼴에 의존하지 않음'
