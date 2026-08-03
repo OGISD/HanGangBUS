@@ -881,17 +881,19 @@ function fetchTide(){
    .catch(function(){ fetchTideBackup(ymd); });   // 실패는 캐시 안 함 → 연간표 표시 후 다음 새로고침에 API 재시도
 }
 var tideBackupDocs={};
-function fetchTideBackup(ymd){
-  var year=ymd.slice(0,4), template=CONFIG.TIDE_BACKUP_TEMPLATE||'';
-  if(!template){ tideFail(); return; }
-  var ready=tideBackupDocs[year] ? Promise.resolve(tideBackupDocs[year]) :
+function loadTideBackupDoc(year){
+  var template=CONFIG.TIDE_BACKUP_TEMPLATE||'';
+  if(!template) return Promise.reject(new Error('연간표 경로 없음'));
+  return tideBackupDocs[year] ? Promise.resolve(tideBackupDocs[year]) :
     fetch(template.replace('{year}',year),{cache:'default'})
       .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
       .then(function(doc){
         if(!doc||doc.stationCode!==TIDE.incheon||doc.unit!=='cm'||String(doc.year)!==year||!doc.days) throw new Error('연간표 형식 오류');
         tideBackupDocs[year]=doc; return doc;
       });
-  ready.then(function(doc){
+}
+function fetchTideBackup(ymd){
+  loadTideBackupDoc(ymd.slice(0,4)).then(function(doc){
     var raw=doc.days[ymd]; if(!Array.isArray(raw)||raw.length<3) throw new Error('오늘 연간표 없음');
     var list=raw.map(function(e){
       if(!Array.isArray(e)||e.length!==3||!/^\d{2}:\d{2}$/.test(e[0])||(e[1]!=='high'&&e[1]!=='low')||isNaN(Number(e[2]))) throw new Error('연간표 값 오류');
@@ -914,8 +916,16 @@ function ymdMinus1(ymd){ // "2026-07-06" → "2026-07-05"
   var d=new Date(ymd+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()-1);
   var p=function(n){return(n<10?'0':'')+n;};
   return d.getUTCFullYear()+'-'+p(d.getUTCMonth()+1)+'-'+p(d.getUTCDate()); }
-// 어제 마지막 물때 조위를 캐시 → 오늘 첫 물때의 증감 계산에 사용(이 API는 어제 데이터를 안 줌)
+// 오늘 첫 물때의 기준: 어제 캐시 우선, 없으면 내장 연간표에서 보충(이 API는 어제 데이터를 안 줌)
 function loadTideCache(){ try{ return JSON.parse(store.get('hb_tidelast',''))||{}; }catch(e){ return {}; } }
+function tideBackupLast(ymd){ // 캐시가 없으면 내장 연간표에서 어제의 가장 늦은 물때를 찾아 첫 행 기준으로 사용
+  var doc=tideBackupDocs[ymd.slice(0,4)], raw=doc&&doc.days&&doc.days[ymd], last=null;
+  if(!Array.isArray(raw)) return null;
+  raw.forEach(function(e){
+    if(Array.isArray(e)&&/^\d{2}:\d{2}$/.test(e[0])&&!isNaN(Number(e[2]))&&(!last||e[0]>last.hm)) last={hm:e[0],val:Number(e[2])};
+  });
+  return last?last.val:null;
+}
 // 한 물때 행 HTML — e:{val,high,delta}, hm:표시시각, nextDay:익일 여부
 function tideRow(hm, e, nextDay){
   var arrow=e.high?'▲':'▼', dcls=e.high?'up':'down';
@@ -924,19 +934,24 @@ function tideRow(hm, e, nextDay){
     '<span class="tt">'+hm+(nextDay?'<span class="nd">익일</span>':'')+'</span>'+
     '<span class="tg '+(e.high?'hi':'lo')+'">'+(e.high?'만조':'간조')+'</span>'+
     '<span class="tv"><b>'+fmt(e.val,0)+'</b> cm</span>'+dl+'</div>'; }
-function renderTide(list,source){
+function renderTide(list,source,anchorChecked){
   source=source||'api';
   var sorted=list.slice().sort(function(a,b){return a.hm<b.hm?-1:1;});
   var ymd=sorted[0].ymd, cache=loadTideCache();
-  var anchor=cache[ymdMinus1(ymd)];  // 어제 마지막 물때 조위(없으면 undefined)
-  // 증감 = 현재 − 직전 물때 (첫 행은 어제 캐시 사용, 없으면 null)
+  var prevYmd=ymdMinus1(ymd), prevYear=prevYmd.slice(0,4);
+  var anchor=cache[prevYmd];
+  if(anchor==null||isNaN(anchor)) anchor=tideBackupLast(prevYmd);  // 전날 앱을 열지 않았어도 연간표로 보충
+  if((anchor==null||isNaN(anchor))&&!anchorChecked&&!tideBackupDocs[prevYear]&&CONFIG.TIDE_BACKUP_TEMPLATE){
+    loadTideBackupDoc(prevYear).then(function(){ renderTide(list,source,true); }).catch(function(){});
+  }
+  // 증감 = 현재 − 직전 물때 (첫 행은 어제 캐시/연간표 기준, 둘 다 없으면 null)
   sorted.forEach(function(e,i){
     var prev = i===0 ? anchor : sorted[i-1].val;
     e.delta = (prev==null||isNaN(prev)) ? null : Math.round(e.val-prev);
   });
   // 오늘 마지막 물때를 캐시에 저장(오늘+어제만 유지) → 내일 첫 행 증감용
   var nc={}; nc[ymd]=sorted[sorted.length-1].val;
-  var y=ymdMinus1(ymd); if(cache[y]!=null) nc[y]=cache[y];
+  if(anchor!=null&&!isNaN(anchor)) nc[prevYmd]=anchor;
   store.set('hb_tidelast',JSON.stringify(nc));
   // 인천: 물때 전부 / 여의도: 물때 전부 +4시간
   $('incheonRows').innerHTML=sorted.map(function(e){ return tideRow(e.hm, e, false); }).join('');
