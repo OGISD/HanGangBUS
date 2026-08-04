@@ -378,7 +378,7 @@
         ⚠ 실측 검증 전이라 단정하지 않고 <b>‘경향’</b>으로만 표시합니다.</div>
 
       <div class="q">‘↑ 12cm/h’, ‘행주 선행 40분(조석 영향 추정)’은 무슨 뜻인가요?</div>
-      <div class="a">· <b>↑ / ↓ / ↔ 숫자cm/h</b> — 그 다리의 수위가 <b>1시간에 몇 cm씩</b> 오르내리는 속도입니다(최근 60분 흐름으로 계산). <span class="num">±4 cm/h</span> 안쪽이면 ‘↔’(변화 없음)로 봅니다.<br>
+      <div class="a">· <b>↑ / ↓ / ↔ 숫자cm/h</b> — 그 다리의 수위가 <b>1시간에 몇 cm씩</b> 오르내리는 속도입니다(최근 40분 흐름으로 계산). <span class="num">±4 cm/h</span> 안쪽이면 ‘↔’(변화 없음)로 봅니다.<br>
         · <b>‘행주 선행 N분’</b> — 두 다리 중 <b>어느 쪽이 먼저 움직였는지</b>입니다. 바다에 가까운 <b>행주가 먼저</b> 움직였으면 바닷물(조석) 때문일 가능성이, 상류의 <b>한강대교가 먼저</b>면 팔당댐 <b>방류</b> 때문일 가능성이 큽니다. 다만 시간차로 미루어 짐작한 것이라 <b>‘추정’</b>이라고 적습니다. 물이 잔잔할 때는 이 항목이 아예 나오지 않습니다.</div>
 
       <div class="q">물때(만조·간조)는 어떻게 보나요?</div>
@@ -748,7 +748,7 @@ function renderWL(rows, sumId, fullId, tId){
 }
 
 /* ----- 한강 역류/순류 판정 (수위 추세 + 인천 조위 위상 교차검증) ----- */
-var FLOW={ winMin:60, deadRate:4,          // 추세: 최근 60분 기울기, ±4cm/h 미만은 정체 — 실측 후 보정
+var FLOW={ winMin:40, deadRate:4,          // 추세: 최근 40분 기울기, ±4cm/h 미만은 정체 — 60분 실사용 비교 후 복원
   corrMin:180, maxLagMin:60, minCorr:0.5, minAmpCm:5, minPts:8 };  // 시간차 교차검증(3시간 구간, ±60분 탐색)
 var flow={ bf:null, hg:null, bfRows:null, hgRows:null, tide:null };  // 각 fetch가 자기 조각 저장 → renderFlow가 합침
 // 최근 winMin 구간의 최소제곱 기울기(cm/h). 2점 차분과 달리 끝값 하나가 튀어도 잘 흔들리지 않음.
