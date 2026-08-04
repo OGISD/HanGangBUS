@@ -45,6 +45,8 @@ Require-Match $html '수위 자료 오래됨 · 역류 판정 중단' '오래된
 # 장애 대응과 호출 최적화
 Require-Match $html 'REQUEST_TIMEOUT=\{ hrfco:8000, tide:3000, tidecur:6000 \}' 'API별 최대 대기시간이 설정됨'
 Require-Match $html 'var TIDE_RETRY_MS=30\*60000' '물때 API 자동 재시도 간격이 30분임'
+Require-Match $html "obsCode='\+TIDE\.incheon\+'\&type=xml'" '물때 API 요청 형식을 XML로 명시함'
+Require-Match $html "if\(s\.charAt\(0\)===\'\{\'\)[\s\S]+JSON\.parse\(s\)[\s\S]+DOMParser" '물때 API의 JSON·XML 응답을 모두 해석함'
 Require-Match $html 'TIDE_BACKUP_TEMPLATE: "data/tide-incheon-\{year\}\.json"' '연간 조석표 백업 경로가 유지됨'
 Require-Match $html 'anchor=tideBackupLast\(prevYmd\)' '첫 물때 증감의 전날 연간표 보충이 유지됨'
 Require-Match $html 'if\(!partial\) try\{ store\.set\(''hb_tidecur''' '조류예측 일부 응답은 하루 캐시에 저장하지 않음'

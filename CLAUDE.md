@@ -64,10 +64,12 @@
   ⚠ 기간 조회의 sdt/edt는 **10분 정각**(…00/…10)으로 맞출 것 — 어긋나면 값이 빈 행만 반환됨.
 - **물때(조석예보 고저조)는 data.go.kr 국립해양조사원 API (2026-07-06 검증·구현)**:
   `https://apis.data.go.kr/1192136/tideFcstHghLw/GetTideFcstHghLwApiService?serviceKey={키}&obsCode={코드}`
-  → 응답 **XML**(`DOMParser`로 파싱). 필드 `predcDt`(예보시각), `predcTdlvVl`(조위 cm), `extrSe`(홀수1·3=만조/짝수2·4=간조).
+  → 요청에는 `type=xml`을 명시. `parseTideApi()`는 **XML·JSON을 모두 파싱**하며 필드는 `predcDt`(예보시각),
+  `predcTdlvVl`(조위 cm), `extrSe`(홀수1·3=만조/짝수2·4=간조). 2026-08-04 API가 형식 미지정 요청에
+  명세상 기본 XML 대신 JSON을 반환한 사례가 있어 이중 해석으로 보강함.
   ⚠ **date 파라미터는 무시됨 — 항상 서버 기준 오늘(KST)만 반환.** 필수 파라미터는 `obsCode`뿐.
-  2026-08-03 기준 서버 요청은 정상이나 브라우저 Origin 요청은 403/CORS로 차단됨. API 복구 여부를 관찰하며,
-  실패 시 같은 GitHub Pages의 연간 조석표 JSON으로 자동 전환함.
+  2026-08-03에는 브라우저 Origin 요청이 403/CORS로 차단된 사례가 있었고, 2026-08-04에는 CORS 정상화를 확인함.
+  이후 CORS·통신·형식 오류가 다시 발생하면 같은 GitHub Pages의 연간 조석표 JSON으로 자동 전환함.
   관측소 코드: **인천 `DT_0001`**(사용 중), 경인항 `DT_0058`(미사용, 기록만).
 - **방문자 브라우저가 HRFCO를 직접 호출**한다(프록시 없음). HRFCO가
   `Access-Control-Allow-Origin: *` 를 주므로 브라우저 직접 호출이 가능 → 프록시 불필요.
@@ -149,8 +151,8 @@
 - **하루 1번만 조회·캐시(2026-07-15 최적화)**: 고저조는 하루치 고정 예보(API가 항상 '오늘'만 줌)라 매 새로고침
   재요청은 낭비였음 → `hb_tide`(localStorage, {ymd,list})에 캐시. 조류세기(`hb_tidecur`)와 동일 패턴. 캐시 히트 시
   `renderTide(list)`만 다시 돌려 화면·역류 위상(`tidePhaseNow`, 시각 기반) 갱신 → **네트워크 0**. 실패는 캐시하지 않음.
-- 관련 코드: `TIDE` 상수(incheon DT_0001, lagMin 240), `fetchTide()/fetchTideBackup()/renderTide()/addMin()/tideFail()`.
-  `fetchAll()` 및 init(수동 모드)에서 호출. XML→`DOMParser` 파싱.
+- 관련 코드: `TIDE` 상수(incheon DT_0001, lagMin 240), `parseTideApi()/fetchTide()/fetchTideBackup()/renderTide()/addMin()/tideFail()`.
+  `fetchAll()` 및 init(수동 모드)에서 호출. XML은 `DOMParser`, JSON은 `JSON.parse()`로 해석.
 - **일출·일몰·월출·월몰 — 현재 없는 기능**: 화면과 호출 코드 모두 제거됨. 현행 기능으로 문서·Q&A에 쓰지 않음.
 
 ## 한강 수위 카드 (행주대교+한강대교 2열, 2026-07-13 합침 · 행주대교 카드 밑)
@@ -270,7 +272,8 @@ var CONFIG = {
 
 ## 다음 할 일 후보 (상세·최신은 TASKS.md 참고)
 - [ ] API 실패 때 이전 화면값을 어떻게 표시할지 심층 논의.
-- [ ] 물때 API의 브라우저 CORS 차단이 일시 장애인지 지속 정책인지 관찰(현재 연간표 자동 백업 작동).
+- [x] 물때 API CORS·응답 형식 재점검(2026-08-04): CORS와 키는 정상. 기본 응답 JSON 변동을 확인해
+  `type=xml` 명시 및 XML·JSON 이중 해석 적용. 실패 시 연간표 자동 백업은 계속 유지.
 - [ ] 2028년 조석표 발간 후 `data/tide-incheon-2028.json` 추가.
 - [ ] 키 노출이 정 부담되면 **국내 IP 서버/프록시**를 따로 둬야 함(무료 serverless 불가). 난이도↑
 - [ ] 교량 추가 시 이 표와 도움말 Q&A에도 같은 형식으로 기록

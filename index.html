@@ -886,6 +886,30 @@ var TIDE={ incheon:"DT_0001", lagMin:240 };  // 여의도 만조 추정 = 인천
 // maxSpeed 125는 오늘(최고 74cm/s)이 59%가 되도록 보정한 값(사리~조금에 따라 %가 오르내림).
 var TIDECUR={ lat:37.451, lon:126.592, maxSpeed:125, hours:[0,3,6,9,12,15,18,21] };
 var TIDE_RETRY_MS=30*60000, tideApiRetryAt=0;
+function parseTideApi(t,ymd){
+  var s=(t||'').trim(), raw=[], i;
+  if(s.charAt(0)==='{'){
+    var j=JSON.parse(s), root=j.response||j;
+    raw=root&&root.body&&root.body.items&&root.body.items.item||[];
+    if(!Array.isArray(raw)) raw=[raw];
+  }else{
+    var xml=new DOMParser().parseFromString(s,'application/xml');
+    var nodes=xml.getElementsByTagName('item');
+    for(i=0;i<nodes.length;i++) raw.push(nodes[i]);
+  }
+  var list=[];
+  for(i=0;i<raw.length;i++){
+    var item=raw[i], g=function(tag){
+      if(item&&item.nodeType){var el=item.getElementsByTagName(tag)[0];return el?el.textContent:'';}
+      return item&&item[tag]!=null?String(item[tag]):'';
+    };
+    var dt=g('predcDt'), val=parseFloat(g('predcTdlvVl')), ext=parseInt(g('extrSe'),10);
+    if(!dt||dt.slice(0,10)!==ymd||isNaN(val)||isNaN(ext)) continue;
+    // extrSe 홀수(1·3)=고조(만조), 짝수(2·4)=저조(간조) — 실측 응답으로 확인
+    list.push({hm:dt.slice(11,16), ymd:dt.slice(0,10), val:val, high:(ext%2===1)});
+  }
+  return list;
+}
 function fetchTide(force){
   // 물때(고저조)는 하루치 고정 예보(API가 항상 '오늘'만 줌) → 하루 1번만 받고 캐시(조류세기와 동일 패턴).
   // 역류 위상(tidePhaseNow)은 시각 기반이라 캐시된 list로 renderTide만 다시 돌려도 최신으로 갱신됨.
@@ -894,20 +918,12 @@ function fetchTide(force){
   try{ var c=JSON.parse(store.get('hb_tide','')); if(c&&c.ymd===ymd&&c.list&&c.list.length){ renderTide(c.list,c.source||'api'); return Promise.resolve(true); } }catch(e){}
   if(!CONFIG.TIDE_KEY || !CONFIG.TIDE_ENDPOINT) return fetchTideBackup(ymd);
   if(!force&&Date.now()<tideApiRetryAt) return fetchTideBackup(ymd);  // 자동 호출은 장애 뒤 30분 쉬고 재시도
-  // date는 무시되고 항상 서버 기준 오늘(KST) — obsCode만 있으면 됨. 응답은 XML.
-  var url=CONFIG.TIDE_ENDPOINT+'?serviceKey='+encodeURIComponent(CONFIG.TIDE_KEY)+'&obsCode='+TIDE.incheon;
+  // date는 무시되고 항상 서버 기준 오늘(KST). XML을 명시하되 서버가 JSON을 보내도 둘 다 해석함.
+  var url=CONFIG.TIDE_ENDPOINT+'?serviceKey='+encodeURIComponent(CONFIG.TIDE_KEY)+'&obsCode='+TIDE.incheon+'&type=xml';
   return fetchTimed(url,{cache:'no-store'},REQUEST_TIMEOUT.tide,function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})
    .then(function(t){
-     var xml=new DOMParser().parseFromString(t,'application/xml');
-     var items=xml.getElementsByTagName('item'), list=[];
-     for(var i=0;i<items.length;i++){
-       var g=function(tag){var el=items[i].getElementsByTagName(tag)[0];return el?el.textContent:'';};
-       var dt=g('predcDt'), val=parseFloat(g('predcTdlvVl')), ext=parseInt(g('extrSe'),10);
-       if(!dt||dt.slice(0,10)!==ymd||isNaN(val)||isNaN(ext)) continue;
-       // extrSe 홀수(1·3)=고조(만조), 짝수(2·4)=저조(간조) — 실측 응답으로 확인
-       list.push({hm:dt.slice(11,16), ymd:dt.slice(0,10), val:val, high:(ext%2===1)});
-     }
-      if(list.length<3) throw new Error('값 없음');
+     var list=parseTideApi(t,ymd);
+     if(list.length<3) throw new Error('값 없음');
       tideApiRetryAt=0;
       try{ store.set('hb_tide', JSON.stringify({ymd:ymd, list:list, source:'api'})); }catch(e){}  // 오늘치 API 캐시
       renderTide(list,'api'); return true;
