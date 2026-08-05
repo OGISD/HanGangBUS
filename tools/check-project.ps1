@@ -38,7 +38,10 @@ Require-Match $html 'id:"jamsu"[^\r\n]+base:11\.76[^\r\n]+noGo:7\.3[^\r\n]+warn:
 Require-Match $html 'id:"haengju"[^\r\n]+base:13\.4[^\r\n]+noGo:10\.9[^\r\n]+warn:10\.9[^\r\n]+offset:0' '행주대교 확정값이 유지됨'
 Require-Match $html 'noGoFlow:3000' '팔당댐 운항금지 방류량이 유지됨'
 Require-Match $html 'var STALE_MIN=30' '데이터 신선도 경고 30분이 유지됨'
-Require-Match $html 'var FLOW=\{ winMin:40, deadRate:4' '역류 추세 핵심값이 유지됨'
+Require-Match $html 'var FLOW_TUNING=\{ winMin:30, deadRate:4 \}' '역류 추세 조정값(30분·±4cm/h)이 한곳에 모여 있음'
+Require-Match $html 'winMin:FLOW_TUNING\.winMin, deadRate:FLOW_TUNING\.deadRate' '역류 계산이 조정 전용 설정값을 사용함'
+Require-Match $html 'data-flow-window[\s\S]+data-flow-dead-rate' '도움말이 역류 조정값을 자동 반영함'
+Require-Match $html 'syncFlowTuningText\(\)' '시작할 때 역류 조정값을 화면에 반영함'
 Require-Match $html 'bothFresh=flowRowsFresh\(flow\.bfRows\)&&flowRowsFresh\(flow\.hgRows\)' '두 관측소가 모두 신선할 때만 역류 판정을 허용함'
 Require-Match $html '수위 자료 오래됨 · 역류 판정 중단' '오래된 수위의 판정 중단 안내가 있음'
 
