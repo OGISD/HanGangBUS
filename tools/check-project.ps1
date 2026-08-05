@@ -42,6 +42,10 @@ Require-Match $html 'var FLOW_TUNING=\{ winMin:30, deadRate:4 \}' '역류 추세
 Require-Match $html 'winMin:FLOW_TUNING\.winMin, deadRate:FLOW_TUNING\.deadRate' '역류 계산이 조정 전용 설정값을 사용함'
 Require-Match $html 'data-flow-window[\s\S]+data-flow-dead-rate' '도움말이 역류 조정값을 자동 반영함'
 Require-Match $html 'syncFlowTuningText\(\)' '시작할 때 역류 조정값을 화면에 반영함'
+Require-Match $html 'function hourlyChange\(rows\)[\s\S]+target=t1-60\*60000[\s\S]+rows\[0\]\.wl-rows\[i\]\.wl' '다리 옆 수위 변화가 최신값과 정확히 1시간 전 값의 차이로 계산됨'
+Require-Match $html 'if\(t===target\)[\s\S]+if\(t!=null&&t<target\) break' '정확히 1시간 전 관측이 없으면 변화량을 추정하지 않음'
+Require-Match $html "cm\+'cm/1h'" '다리 옆 실제 1시간 변화량 단위가 명확히 표시됨'
+Require-Match $html '한강 수위 · 판정 30분' '카드 제목이 30분 판정과 1시간 변화 표시를 구분함'
 Require-Match $html 'bothFresh=flowRowsFresh\(flow\.bfRows\)&&flowRowsFresh\(flow\.hgRows\)' '두 관측소가 모두 신선할 때만 역류 판정을 허용함'
 Require-Match $html '수위 자료 오래됨 · 역류 판정 중단' '오래된 수위의 판정 중단 안내가 있음'
 

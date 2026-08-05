@@ -282,7 +282,7 @@
       </div>
     </div>
     <div class="card" id="wlCard">
-      <div class="chead"><span class="nm">한강 수위 · 최근 30분</span><span class="t" id="wlT">—</span></div>
+      <div class="chead"><span class="nm">한강 수위 · 판정 30분</span><span class="t" id="wlT">—</span></div>
       <div class="flowbadge off" id="flowBadge">수위 불러오는 중…</div>
       <div class="dam">
         <div class="dcol">
@@ -377,8 +377,9 @@
         판정은 <b>두 다리의 수위 추세 + 인천 물때(밀물/썰물)</b>를 함께 봐서 내리며, 배지 아래 작은 글씨가 그 근거입니다.<br>
         ⚠ 실측 검증 전이라 단정하지 않고 <b>‘경향’</b>으로만 표시합니다.</div>
 
-      <div class="q">‘↑ 12cm/h’, ‘행주 선행 N분(조석 영향 추정)’은 무슨 뜻인가요?</div>
-      <div class="a">· <b>↑ / ↓ / ↔ 숫자cm/h</b> — 그 다리의 수위가 <b>1시간에 몇 cm씩</b> 오르내리는 속도입니다(최근 <b><span data-flow-window></span>분</b> 흐름으로 계산). <span class="num">±<span data-flow-dead-rate></span> cm/h</span> 안쪽이면 ‘↔’(변화 없음)로 봅니다.<br>
+      <div class="q">‘↑ 12cm/1h’, ‘행주 선행 N분(조석 영향 추정)’은 무슨 뜻인가요?</div>
+      <div class="a">· <b>↑ / ↓ / ↔ 숫자cm/1h</b> — 최신 관측 수위와 <b>정확히 1시간 전 관측 수위의 실제 차이</b>입니다. 30분 변화량을 두 배로 늘린 값이 아니며, 정확히 1시간 전 자료가 없으면 표시하지 않습니다.<br>
+        · <b>역류 판정</b> — 위의 1시간 변화 표시와 별도로, 최근 <b><span data-flow-window></span>분</b> 수위 흐름을 계산합니다. 시간당 기울기가 <span class="num">±<span data-flow-dead-rate></span> cm/h</span> 안쪽이면 변화 없음으로 봅니다.<br>
         · <b>‘행주 선행 N분’</b> — 두 다리 중 <b>어느 쪽이 먼저 움직였는지</b>입니다. 바다에 가까운 <b>행주가 먼저</b> 움직였으면 바닷물(조석) 때문일 가능성이, 상류의 <b>한강대교가 먼저</b>면 팔당댐 <b>방류</b> 때문일 가능성이 큽니다. 다만 시간차로 미루어 짐작한 것이라 <b>‘추정’</b>이라고 적습니다. 물이 잔잔할 때는 이 항목이 아예 나오지 않습니다.</div>
 
       <div class="q">물때(만조·간조)는 어떻게 보나요?</div>
@@ -818,11 +819,22 @@ function leadLag(aRows, bRows){   // a=행주, b=한강대교 (둘 다 최신순
     : best.lagMin>0 ? 'bf' : best.lagMin<0 ? 'hg' : 'tie';
   return best;
 }
-function trendArrow(t){   // 기울기(cm/h)로 표시 — 두 다리를 같은 잣대로 비교 가능
-  if(!t) return {txt:'', cls:''};
-  if(t.dir==='up')   return {txt:'↑ '+t.rate+'cm/h', cls:'up'};
-  if(t.dir==='down') return {txt:'↓ '+Math.abs(t.rate)+'cm/h', cls:'down'};
-  return {txt:'↔ '+Math.abs(t.rate)+'cm/h', cls:'flat'};
+function hourlyChange(rows){   // 최신 관측값 - 정확히 60분 전 관측값(cm), 추정·보간하지 않음
+  if(!rows||rows.length<2) return null;
+  var t1=ymdhmToMs(rows[0].ymdhm); if(t1==null) return null;
+  var target=t1-60*60000;
+  for(var i=1;i<rows.length;i++){
+    var t=ymdhmToMs(rows[i].ymdhm);
+    if(t===target) return Math.round((rows[0].wl-rows[i].wl)*100);
+    if(t!=null&&t<target) break;
+  }
+  return null;
+}
+function hourlyChangeArrow(rows){
+  var cm=hourlyChange(rows); if(cm==null) return {txt:'', cls:''};
+  if(cm>0) return {txt:'↑ '+cm+'cm/1h', cls:'up'};
+  if(cm<0) return {txt:'↓ '+Math.abs(cm)+'cm/1h', cls:'down'};
+  return {txt:'↔ 0cm/1h', cls:'flat'};
 }
 function flowRowsAge(rows){
   return rows&&rows[0] ? ymdhmAgeMin(rows[0].ymdhm) : null;
@@ -833,8 +845,8 @@ function flowRowsFresh(rows){
 function renderFlow(){
   var badge=$('flowBadge'); if(!badge) return;
   var bothFresh=flowRowsFresh(flow.bfRows)&&flowRowsFresh(flow.hgRows);
-  [['bf','bfTrend','bfRows'],['hg','hgTrend','hgRows']].forEach(function(pp){   // 오래된 수위의 추세 숫자는 숨김
-    var el=$(pp[1]); if(!el) return; var a=trendArrow(bothFresh?flow[pp[0]]:null);
+  [['bfTrend','bfRows'],['hgTrend','hgRows']].forEach(function(pp){   // 관측소별 최신 1시간 실제 변화량
+    var el=$(pp[0]); if(!el) return; var rows=flow[pp[1]], a=hourlyChangeArrow(flowRowsFresh(rows)?rows:null);
     el.textContent=a.txt; el.className='wltrend '+a.cls;
   });
   var bf=flow.bf, hg=flow.hg, ph=flow.tide;
