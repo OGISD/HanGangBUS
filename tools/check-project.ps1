@@ -53,7 +53,7 @@ Require-Match $html 'function flowVerdict\(bfDir,hgDir,ph\)' '역류 방향 판�
 Require-Match $html "matches===1[\s\S]+out\('up','🔺 상류 흐름 가능성'[\s\S]+out\('down','🔻 하류 흐름 가능성'" '밀물·썰물 방향 가능성을 대칭적으로 판정함'
 Require-Match $html "if\(v\.segmentDiff\) evid\.push\('두 지점의 수위 변화가 다름'\)" '두 다리의 수위 변화 방향이 다름을 안내함'
 Require-Match $html '⏸ 수위 변화 작음' '두 다리 모두 작은 변화인 상태를 별도로 표시함'
-Require-Match $html '↕ 관측 방향이 달라 판단 어려움' '물때와 수위 근거가 맞지 않는 상태를 별도로 표시함'
+Require-Match $html '↕ 흐름 방향 판단 어려움' '물때와 수위 근거가 맞지 않는 상태를 별도로 표시함'
 Require-Match $html '실제 물이 멈췄다는 뜻은 아닙니다' '수위 추세 판정의 한계를 도움말에 안내함'
 Require-Match $html 'bothFresh=flowRowsFresh\(flow\.bfRows\)&&flowRowsFresh\(flow\.hgRows\)' '두 관측소가 모두 신선할 때만 역류 판정을 허용함'
 Require-Match $html '수위 자료가 오래되어 판정 보류' '오래된 수위의 판정 보류 안내가 있음'
@@ -110,7 +110,7 @@ const cases = [
   ['두 다리 하강', 'down', 'down', 'ebb', 'down', '순류', false],
   ['두 다리 상승', 'up', 'up', 'flood', 'up', '역류 경향', false],
   ['두 다리 변화 작음', 'flat', 'flat', 'ebb', 'flat', '수위 변화 작음', false],
-  ['물때와 수위 불일치', 'up', 'up', 'ebb', 'flat', '관측 방향이 달라 판단 어려움', false]
+  ['물때와 수위 불일치', 'up', 'up', 'ebb', 'flat', '흐름 방향 판단 어려움', false]
 ];
 for (const c of cases) {
   const r = flowVerdict(c[1], c[2], c[3]);
