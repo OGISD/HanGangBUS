@@ -370,11 +370,11 @@
       <div class="q">‘한강 수위’ 카드는 뭔가요?</div>
       <div class="a">행주대교와 한강대교의 실시간 수위를 좌우로 나란히 보여 줍니다(최근 30분 3개, ‘과거 4시간 기록’ 펼치기 가능). 한강 <b>역류</b>(밀물이 상류로 거슬러 오르는 현상) 감시에 참고합니다. <b>한강대교</b>는 마포대교 지점에 수위 관측소가 없어, 가장 가까운(<span class="num">≈3 km</span> 상류, 수위 사실상 동일) 한강대교 값을 대신 씁니다.</div>
 
-      <div class="q">‘🔺 역류 경향’ · ‘🔻 순류’ · ‘⏸ 정체·전환점’은 무슨 뜻인가요?</div>
+      <div class="q">‘🔺 역류 경향’ · ‘🔻 순류’ · <span class="flow-nowrap">‘⏸ 수위 변화 작음·판정 불확실’</span>은 무슨 뜻인가요?</div>
       <div class="a">한강 수위 카드 맨 위 배지로, 지금 한강 물이 <b>어느 쪽으로 흐르는 경향</b>인지 보여 줍니다.<br>
         · <b>🔺 역류 경향</b> — 밀물이 바다에서 한강 <b>상류로</b> 밀고 올라오는 흐름. 한강대교까지 올라오면 ‘여의도까지’가 붙습니다.<br>
         · <b>🔻 순류</b> — 강물이 원래 방향인 <b>하류(바다 쪽)</b>로 빠지는 흐름.<br>
-        · <b>⏸ 정체·전환점</b> — 물이 거의 멈췄거나 방향이 바뀌는 중입니다(근거가 서로 엇갈릴 때도 여기로 표시).<br>
+        · <b>⏸ 수위 변화 작음·판정 불확실</b> — 수위 변화가 작거나 근거가 서로 엇갈려 방향을 정하기 어렵다는 뜻입니다. <b>실제 물이 멈췄다는 뜻은 아닙니다.</b><br>
         판정은 <b>두 다리의 수위 추세 + 인천 물때(밀물/썰물)</b>를 함께 봐서 내리며, 배지 아래 작은 글씨가 그 근거입니다.<br>
         ⚠ 실측 검증 전이라 단정하지 않고 <b>‘경향’</b>으로만 표시합니다.</div>
 
@@ -752,7 +752,7 @@ function renderWL(rows, sumId, fullId, tId){
 /* ----- 한강 역류/순류 판정 (수위 추세 + 인천 조위 위상 교차검증) ----- */
 // 민감도 조정은 아래 두 값만 바꾼다. 화면 도움말·진단은 이 값을 자동 반영한다.
 // winMin을 줄이면 전환을 빨리 잡고, deadRate를 낮추면 작은 변화도 움직임으로 본다.
-var FLOW_TUNING={ winMin:30, deadRate:4 };
+var FLOW_TUNING={ winMin:30, deadRate:2 };
 var FLOW={ winMin:FLOW_TUNING.winMin, deadRate:FLOW_TUNING.deadRate,
   corrMin:180, maxLagMin:60, minCorr:0.5, minAmpCm:5, minPts:8 };  // 시간차 교차검증(3시간 구간, ±60분 탐색)
 var flow={ bf:null, hg:null, bfRows:null, hgRows:null, tide:null };  // 각 fetch가 자기 조각 저장 → renderFlow가 합침
@@ -875,7 +875,7 @@ function renderFlow(){
   } else if(bf.dir==='down' && (ph==='ebb'||ph==null)){
     cls='down'; verdict='🔻 순류 · 한강→바다(하류)';
   } else {
-    cls='flat'; verdict='⏸ 정체·전환점';
+    cls='flat'; verdict='<span class="flow-nowrap">⏸ 수위 변화 작음·판정 불확실</span>';
   }
   badge.className='flowbadge '+cls;
   badge.innerHTML=verdict+'<span class="sub">'+evid.join(' · ')+'</span>';

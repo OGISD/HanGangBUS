@@ -38,7 +38,7 @@ Require-Match $html 'id:"jamsu"[^\r\n]+base:11\.76[^\r\n]+noGo:7\.3[^\r\n]+warn:
 Require-Match $html 'id:"haengju"[^\r\n]+base:13\.4[^\r\n]+noGo:10\.9[^\r\n]+warn:10\.9[^\r\n]+offset:0' '행주대교 확정값이 유지됨'
 Require-Match $html 'noGoFlow:3000' '팔당댐 운항금지 방류량이 유지됨'
 Require-Match $html 'var STALE_MIN=30' '데이터 신선도 경고 30분이 유지됨'
-Require-Match $html 'var FLOW_TUNING=\{ winMin:30, deadRate:4 \}' '역류 추세 조정값(30분·±4cm/h)이 한곳에 모여 있음'
+Require-Match $html 'var FLOW_TUNING=\{ winMin:30, deadRate:2 \}' '역류 추세 조정값(30분·±2cm/h)이 한곳에 모여 있음'
 Require-Match $html 'winMin:FLOW_TUNING\.winMin, deadRate:FLOW_TUNING\.deadRate' '역류 계산이 조정 전용 설정값을 사용함'
 Require-Match $html 'data-flow-window[\s\S]+data-flow-dead-rate' '도움말이 역류 조정값을 자동 반영함'
 Require-Match $html 'syncFlowTuningText\(\)' '시작할 때 역류 조정값을 화면에 반영함'
@@ -49,6 +49,8 @@ Require-Match $html '한강 수위 · 판정 30분' '카드 제목이 30분 판�
 Require-Match $html '행주 ''\+ll\.lagMin\+''분 먼저 변함\(조석 추정\)' '일반 화면의 행주 시간차가 쉬운 표현으로 표시됨'
 Require-Match $html '한강대교 ''\+Math\.abs\(ll\.lagMin\)\+''분 먼저 변함\(방류 추정\)' '일반 화면의 한강대교 시간차가 쉬운 표현으로 표시됨'
 Require-Match $html '\.flow-nowrap\{white-space:nowrap\}' '시간차 문구 내부의 줄바꿈을 방지함'
+Require-Match $html '⏸ 수위 변화 작음·판정 불확실' '작은 수위 변화를 실제 정체로 단정하지 않음'
+Require-Match $html '실제 물이 멈췄다는 뜻은 아닙니다' '수위 추세 판정의 한계를 도움말에 안내함'
 Require-Match $html 'bothFresh=flowRowsFresh\(flow\.bfRows\)&&flowRowsFresh\(flow\.hgRows\)' '두 관측소가 모두 신선할 때만 역류 판정을 허용함'
 Require-Match $html '수위 자료 오래됨 · 역류 판정 중단' '오래된 수위의 판정 중단 안내가 있음'
 
