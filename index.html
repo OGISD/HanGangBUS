@@ -373,8 +373,8 @@
 
       <div class="q">역류 카드의 방향 판정은 어떻게 보나요?</div>
       <div class="a">한강 수위 카드 맨 위 배지로, <b>여의도 추정 물때와 두 다리 수위 변화가 어느 방향의 가능성을 보이는지</b> 알려 줍니다.<br>
-        · <b>🔺 역류 가능성</b> — 여의도 추정 밀물과 다리 수위 상승이 맞을 때 표시합니다.<br>
-        · <b>🔻 하류 흐름 가능성</b> — 여의도 추정 썰물과 다리 수위 하강이 맞을 때 표시합니다.<br>
+        · <b>🔺 상류로 흐르는 경향</b> — 여의도 추정 밀물과 다리 수위 상승이 맞을 때 표시합니다.<br>
+        · <b>🔻 하류로 흐르는 경향</b> — 여의도 추정 썰물과 다리 수위 하강이 맞을 때 표시합니다.<br>
         · <b>두 지점의 수위 변화가 다름</b> — 한 다리는 상승하고 다른 다리는 하강할 때 함께 표시합니다.<br>
         · <b>⏸ 수위 변화 작음</b> — 두 다리 모두 수위 변화가 작다는 뜻이며, <b>실제 물이 멈췄다는 뜻은 아닙니다.</b><br>
         · <b>↕ 흐름 방향 판단 어려움</b> — 여의도 추정 물때와 수위 변화가 맞지 않아 방향을 정하기 어려운 상태입니다.<br>
@@ -863,11 +863,11 @@ function flowVerdict(bfDir,hgDir,ph){
       else if(dirs[i]!=='flat') opposites++;
     }
     if(matches===2) return phaseDir==='up'
-      ? out('up','🔺 역류 가능성',false,true)
-      : out('down','🔻 하류 흐름 가능성',false,true);
+      ? out('up','🔺 상류로 흐르는 경향',false,true)
+      : out('down','🔻 하류로 흐르는 경향',false,true);
     if(matches===1) return phaseDir==='up'
-      ? out('up','🔺 역류 가능성',opposites>0,true)
-      : out('down','🔻 하류 흐름 가능성',opposites>0,true);
+      ? out('up','🔺 상류로 흐르는 경향',opposites>0,true)
+      : out('down','🔻 하류로 흐르는 경향',opposites>0,true);
   }
   if(bothFlat) return out('flat','⏸ 수위 변화 작음',false,true);
   return out('flat','↕ 흐름 방향 판단 어려움',false,true);

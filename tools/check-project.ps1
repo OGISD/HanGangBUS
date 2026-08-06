@@ -50,7 +50,7 @@ Require-Match $html '행주 수위 ''\+ll\.lagMin\+''분 먼저 변함 · 조석
 Require-Match $html '한강대교 수위 ''\+Math\.abs\(ll\.lagMin\)\+''분 먼저 변함 · 방류 영향 추정' '일반 화면의 한강대교 시간차가 쉬운 표현으로 표시됨'
 Require-Match $html '\.flow-nowrap\{white-space:nowrap\}' '시간차 문구 내부의 줄바꿈을 방지함'
 Require-Match $html 'function flowVerdict\(bfDir,hgDir,ph\)' '역류 방향 판정이 별도 함수로 분리됨'
-Require-Match $html "matches===1[\s\S]+out\('up','🔺 역류 가능성'[\s\S]+out\('down','🔻 하류 흐름 가능성'" '밀물·썰물 방향 가능성을 대칭적으로 판정함'
+Require-Match $html "matches===1[\s\S]+out\('up','🔺 상류로 흐르는 경향'[\s\S]+out\('down','🔻 하류로 흐르는 경향'" '밀물·썰물 방향 경향을 같은 문장 구조로 판정함'
 Require-Match $html "if\(v\.segmentDiff\) evid\.push\('두 지점의 수위 변화가 다름'\)" '두 다리의 수위 변화 방향이 다름을 안내함'
 Require-NoMatch $html '상류 방향 예상|하류 방향 예상|lowConfidence' '물때만으로 흐름 방향을 강제하지 않음'
 Require-NoMatch $html "else if\(!bothFlat\)[\s\S]+bfDir===hgDir" '물때가 없을 때 수위만으로 방향을 강제하지 않음'
@@ -110,10 +110,10 @@ if (-not $NodePath -or -not (Test-Path -LiteralPath $NodePath)) {
   } else {
     $flowCases = @'
 const cases = [
-  ['한쪽만 썰물 방향', 'up', 'down', 'ebb', 'down', '하류 흐름 가능성', true],
-  ['한쪽만 밀물 방향', 'down', 'up', 'flood', 'up', '역류 가능성', true],
-  ['두 다리 하강', 'down', 'down', 'ebb', 'down', '하류 흐름 가능성', false],
-  ['두 다리 상승', 'up', 'up', 'flood', 'up', '역류 가능성', false],
+  ['한쪽만 썰물 방향', 'up', 'down', 'ebb', 'down', '하류로 흐르는 경향', true],
+  ['한쪽만 밀물 방향', 'down', 'up', 'flood', 'up', '상류로 흐르는 경향', true],
+  ['두 다리 하강', 'down', 'down', 'ebb', 'down', '하류로 흐르는 경향', false],
+  ['두 다리 상승', 'up', 'up', 'flood', 'up', '상류로 흐르는 경향', false],
   ['두 다리 변화 작음', 'flat', 'flat', 'ebb', 'flat', '수위 변화 작음', false],
   ['썰물·두 다리 상승', 'up', 'up', 'ebb', 'flat', '흐름 방향 판단 어려움', false],
   ['밀물·두 다리 하강', 'down', 'down', 'flood', 'flat', '흐름 방향 판단 어려움', false],
