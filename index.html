@@ -372,15 +372,14 @@
       <div class="a">행주대교와 한강대교의 실시간 수위를 좌우로 나란히 보여 줍니다(최근 30분 3개, ‘과거 4시간 기록’ 펼치기 가능). 한강 <b>역류</b>(밀물이 상류로 거슬러 오르는 현상) 감시에 참고합니다. <b>한강대교</b>는 마포대교 지점에 수위 관측소가 없어, 가장 가까운(<span class="num">≈3 km</span> 상류, 수위 사실상 동일) 한강대교 값을 대신 씁니다.</div>
 
       <div class="q">역류 카드의 방향 판정은 어떻게 보나요?</div>
-      <div class="a">한강 수위 카드 맨 위 배지로, 지금 한강 물이 <b>어느 쪽으로 흐르는 경향</b>인지 보여 줍니다.<br>
-        · <b>🔺 역류 경향 / 상류 흐름 가능성</b> — 밀물과 다리 수위 상승이 맞으면 상류 방향으로 봅니다. 두 다리가 모두 상승하면 역류 경향, 한쪽만 맞으면 상류 흐름 가능성으로 낮춰 표시합니다.<br>
-        · <b>🔻 순류 / 하류 흐름 가능성</b> — 썰물과 다리 수위 하강이 맞으면 하류 방향으로 봅니다. 두 다리가 모두 하강하면 순류, 한쪽만 맞으면 하류 흐름 가능성으로 낮춰 표시합니다.<br>
+      <div class="a">한강 수위 카드 맨 위 배지로, <b>여의도 추정 물때와 두 다리 수위 변화가 어느 방향의 가능성을 보이는지</b> 알려 줍니다.<br>
+        · <b>🔺 역류 가능성</b> — 여의도 추정 밀물과 다리 수위 상승이 맞을 때 표시합니다.<br>
+        · <b>🔻 하류 흐름 가능성</b> — 여의도 추정 썰물과 다리 수위 하강이 맞을 때 표시합니다.<br>
         · <b>두 지점의 수위 변화가 다름</b> — 한 다리는 상승하고 다른 다리는 하강할 때 함께 표시합니다.<br>
         · <b>⏸ 수위 변화 작음</b> — 두 다리 모두 수위 변화가 작다는 뜻이며, <b>실제 물이 멈췄다는 뜻은 아닙니다.</b><br>
-        · <b>🔺 상류 방향 예상 / 🔻 하류 방향 예상</b> — 물때와 수위 변화가 맞지 않아도 물때를 기준으로 예상 방향을 보여 줍니다. 이때는 근거줄에 <b>신뢰 낮음</b>을 함께 표시합니다.<br>
-        · <b>↕ 흐름 방향 판단 어려움</b> — 물때 정보가 없고 두 다리의 수위 방향도 서로 다를 때만 표시합니다.<br>
-        판정은 <b>두 다리의 수위 추세 + 인천 물때(밀물/썰물)</b>를 함께 봐서 내리며, 배지 아래 작은 글씨가 그 근거입니다.<br>
-        ⚠ 실측 검증 전이라 단정하지 않고 <b>‘경향’</b>으로만 표시합니다.</div>
+        · <b>↕ 흐름 방향 판단 어려움</b> — 여의도 추정 물때와 수위 변화가 맞지 않아 방향을 정하기 어려운 상태입니다.<br>
+        판정은 <b>두 다리의 수위 추세 + 여의도 추정 물때(인천 물때 약 4시간 뒤)</b>를 함께 보며, 배지 아래 작은 글씨가 그 근거입니다.<br>
+        ⚠ 수위와 물때로 추정한 참고 정보이며 <b>실제 물의 유속·방향을 직접 측정한 값은 아닙니다.</b></div>
 
       <div class="q">‘↑ 12cm/1h’, <span class="flow-nowrap">‘행주 수위 N분 먼저 변함 · 조석 영향 추정’</span>은 무슨 뜻인가요?</div>
       <div class="a">· <b>↑ / ↓ / ↔ 숫자cm/1h</b> — 최신 관측 수위와 <b>정확히 1시간 전 관측 수위의 실제 차이</b>입니다. 30분 변화량을 두 배로 늘린 값이 아니며, 정확히 1시간 전 자료가 없으면 표시하지 않습니다.<br>
@@ -753,7 +752,7 @@ function renderWL(rows, sumId, fullId, tId){
   if(key){ flow[key]=wlTrend(rows); flow[key+'Rows']=rows; renderFlow(); }   // rows는 시간차 교차검증에 씀
 }
 
-/* ----- 한강 역류/순류 판정 (수위 추세 + 인천 조위 위상 교차검증) ----- */
+/* ----- 한강 역류/순류 판정 (수위 추세 + 여의도 추정 조위 위상 교차검증) ----- */
 // 민감도 조정은 아래 두 값만 바꾼다. 화면 도움말·진단은 이 값을 자동 반영한다.
 // winMin을 줄이면 전환을 빨리 잡고, deadRate를 낮추면 작은 변화도 움직임으로 본다.
 var FLOW_TUNING={ winMin:30, deadRate:2 };
@@ -780,13 +779,19 @@ function wlTrend(rows){   // rows: 최신순 {ymdhm,wl}
   return { rate:rate, dCm:Math.round((ys[0]-ys[n-1])*100), mins:Math.round(-xs[n-1]*60), pts:n,
     dir: rate>=FLOW.deadRate?'up' : rate<=-FLOW.deadRate?'down' : 'flat' };
 }
-function tidePhaseNow(list){   // 오늘 고저조 → 현재 밀물(flood)/썰물(ebb)
+function tidePhaseNow(list,shiftMin,nowKstMs){   // 고저조를 지정 시간만큼 늦춘 지점의 현재 밀물/썰물
   if(!list||!list.length) return null;
-  var s=list.slice().sort(function(a,b){return a.hm<b.hm?-1:1;});
-  var d=new Date(Date.now()+9*3600000), p=function(n){return(n<10?'0':'')+n;};
-  var now=p(d.getUTCHours())+':'+p(d.getUTCMinutes());
-  for(var i=0;i<s.length;i++){ if(s[i].hm>now) return s[i].high?'flood':'ebb'; }  // 다음 극값: 고조=밀물
-  return s[s.length-1].high?'ebb':'flood';   // 오늘 극값 다 지남: 고조 뒤=썰물
+  var add=shiftMin||0, s=[], i, t;
+  for(i=0;i<list.length;i++){
+    if(!list[i].ymd||!/^\d{2}:\d{2}$/.test(list[i].hm)) continue;
+    t=Date.parse(list[i].ymd+'T'+list[i].hm+':00Z');
+    if(!isNaN(t)) s.push({t:t+add*60000,high:list[i].high});
+  }
+  if(!s.length) return null;
+  s.sort(function(a,b){return a.t-b.t;});
+  var now=nowKstMs==null?Date.now()+9*3600000:nowKstMs;
+  for(i=0;i<s.length;i++){ if(s[i].t>now) return s[i].high?'flood':'ebb'; }  // 다음 극값: 고조=밀물
+  return s[s.length-1].high?'ebb':'flood';
 }
 // 두 관측소 중 '누가 먼저' 움직였나 — 1차 차분(움직임)만 10분 격자로 교차상관.
 // 조석(역류)은 바다 쪽 행주가 먼저 → 한강대교가 나중. 팔당댐 방류는 상류 한강대교가 먼저 → 행주가 나중.
@@ -847,37 +852,22 @@ function flowRowsAge(rows){
 function flowRowsFresh(rows){
   var age=flowRowsAge(rows); return age!=null&&age<STALE_MIN;
 }
-// 밀물/썰물과 두 관측소 방향을 대칭적으로 판정한다. 수위 방향이 모두 반대여도 물때 기준 예상 방향은 표시한다.
+// 여의도 추정 밀물/썰물과 두 관측소 방향을 대칭적으로 판정한다. 근거가 상충하면 방향을 강제로 정하지 않는다.
 function flowVerdict(bfDir,hgDir,ph){
   var phaseDir=ph==='flood'?'up':ph==='ebb'?'down':null;
   var dirs=[bfDir,hgDir], bothFlat=bfDir==='flat'&&hgDir==='flat', i, matches=0, opposites=0;
-  var out=function(cls,text,segmentDiff,nowrap,lowConfidence){return {
-    cls:cls,text:text,segmentDiff:segmentDiff,nowrap:nowrap,lowConfidence:!!lowConfidence
-  };};
+  var out=function(cls,text,segmentDiff,nowrap){return {cls:cls,text:text,segmentDiff:segmentDiff,nowrap:nowrap};};
   if(phaseDir){
     for(i=0;i<dirs.length;i++){
       if(dirs[i]===phaseDir) matches++;
       else if(dirs[i]!=='flat') opposites++;
     }
     if(matches===2) return phaseDir==='up'
-      ? out('up','🔺 역류 경향 · 여의도까지 상류 방향',false,false)
-      : out('down','🔻 순류 · 한강→바다(하류)',false,false);
+      ? out('up','🔺 역류 가능성',false,true)
+      : out('down','🔻 하류 흐름 가능성',false,true);
     if(matches===1) return phaseDir==='up'
-      ? out('up','🔺 상류 흐름 가능성',opposites>0,true)
+      ? out('up','🔺 역류 가능성',opposites>0,true)
       : out('down','🔻 하류 흐름 가능성',opposites>0,true);
-    if(!bothFlat&&opposites>0) return phaseDir==='up'
-      ? out('up','🔺 상류 방향 예상',false,true,true)
-      : out('down','🔻 하류 방향 예상',false,true,true);
-  }else if(!bothFlat){
-    if(bfDir===hgDir) return bfDir==='up'
-      ? out('up','🔺 상류 흐름 가능성',false,true)
-      : out('down','🔻 하류 흐름 가능성',false,true);
-    if(bfDir==='flat'&&hgDir!=='flat') return hgDir==='up'
-      ? out('up','🔺 상류 흐름 가능성',false,true)
-      : out('down','🔻 하류 흐름 가능성',false,true);
-    if(hgDir==='flat'&&bfDir!=='flat') return bfDir==='up'
-      ? out('up','🔺 상류 흐름 가능성',false,true)
-      : out('down','🔻 하류 흐름 가능성',false,true);
   }
   if(bothFlat) return out('flat','⏸ 수위 변화 작음',false,true);
   return out('flat','↕ 흐름 방향 판단 어려움',false,true);
@@ -901,14 +891,13 @@ function renderFlow(){
   var ll=leadLag(flow.bfRows, flow.hgRows);   // 누가 먼저 움직였나(조석 영향 추정 vs 방류 영향 추정)
   var v=flowVerdict(bf.dir,hg.dir,ph);
   var evid=[];
-  if(ph) evid.push('인천 '+(ph==='flood'?'밀물':'썰물')+(v.lowConfidence?' 기준':''));
+  if(ph) evid.push('여의도 '+(ph==='flood'?'밀물':'썰물')+' 추정');
   evid.push('행주 '+(bf.dir==='up'?'↑':bf.dir==='down'?'↓':'↔'));
   if(hg) evid.push('한강대교 '+(hg.dir==='up'?'↑':hg.dir==='down'?'↓':'↔'));
   // 원인은 시간차로 미루어 짐작하는 것이라 '추정'을 명시(확정 아님)
   if(ll&&ll.lead==='bf') evid.push('<span class="flow-nowrap">행주 수위 '+ll.lagMin+'분 먼저 변함 · 조석 영향 추정</span>');
   else if(ll&&ll.lead==='hg') evid.push('<span class="flow-nowrap">한강대교 수위 '+Math.abs(ll.lagMin)+'분 먼저 변함 · 방류 영향 추정</span>');
   if(v.segmentDiff) evid.push('두 지점의 수위 변화가 다름');
-  if(v.lowConfidence) evid.push('수위 변화와 맞지 않아 신뢰 낮음');
   badge.className='flowbadge '+v.cls;
   badge.innerHTML=(v.nowrap?'<span class="flow-nowrap">'+v.text+'</span>':v.text)+'<span class="sub">'+evid.join(' · ')+'</span>';
   setFlowDiag(ll);
@@ -1029,6 +1018,11 @@ function tideBackupLast(ymd){ // 캐시가 없으면 내장 연간표에서 어�
   });
   return last?last.val:null;
 }
+function tideBackupEvents(ymd){ // 자정 직후 여의도 위상 계산에 필요한 전날 고저조
+  var doc=tideBackupDocs[ymd.slice(0,4)], raw=doc&&doc.days&&doc.days[ymd];
+  if(!Array.isArray(raw)) return [];
+  return raw.map(function(e){return {hm:e[0],ymd:ymd,val:Number(e[2]),high:e[1]==='high'};});
+}
 // 한 물때 행 HTML — e:{val,high,delta}, hm:표시시각, nextDay:익일 여부
 function tideRow(hm, e, nextDay){
   var arrow=e.high?'▲':'▼', dcls=e.high?'up':'down';
@@ -1037,14 +1031,14 @@ function tideRow(hm, e, nextDay){
     '<span class="tt">'+hm+(nextDay?'<span class="nd">익일</span>':'')+'</span>'+
     '<span class="tg '+(e.high?'hi':'lo')+'">'+(e.high?'만조':'간조')+'</span>'+
     '<span class="tv"><b>'+fmt(e.val,0)+'</b> cm</span>'+dl+'</div>'; }
-function renderTide(list,source,anchorChecked){
+function renderTide(list,source,backupChecked){
   source=source||'api';
   var sorted=list.slice().sort(function(a,b){return a.hm<b.hm?-1:1;});
   var ymd=sorted[0].ymd, cache=loadTideCache();
   var prevYmd=ymdMinus1(ymd), prevYear=prevYmd.slice(0,4);
   var anchor=cache[prevYmd];
   if(anchor==null||isNaN(anchor)) anchor=tideBackupLast(prevYmd);  // 전날 앱을 열지 않았어도 연간표로 보충
-  if((anchor==null||isNaN(anchor))&&!anchorChecked&&!tideBackupDocs[prevYear]&&CONFIG.TIDE_BACKUP_TEMPLATE){
+  if(!backupChecked&&!tideBackupDocs[prevYear]&&CONFIG.TIDE_BACKUP_TEMPLATE){
     loadTideBackupDoc(prevYear).then(function(){ renderTide(list,source,true); }).catch(function(){});
   }
   // 증감 = 현재 − 직전 물때 (첫 행은 어제 캐시/연간표 기준, 둘 다 없으면 null)
@@ -1065,7 +1059,10 @@ function renderTide(list,source,anchorChecked){
     el.className='t'+(source==='table'?' backup':'');
     el.title=source==='table'?'API 연결 실패로 내장 연간 조석표 사용 중':'공공 API 조석예보 사용 중';
   });
-  flow.tide=tidePhaseNow(sorted); renderFlow();   // 역류 판정 교차검증용 인천 밀/썰물 위상
+  var prevPhaseEvents=tideBackupEvents(prevYmd), phaseList=prevPhaseEvents.concat(sorted);
+  var kstNow=new Date(Date.now()+9*3600000), beforeLag=kstNow.getUTCHours()*60+kstNow.getUTCMinutes()<TIDE.lagMin;
+  flow.tide=(!prevPhaseEvents.length&&beforeLag)?null:tidePhaseNow(phaseList,TIDE.lagMin);
+  renderFlow();   // 여의도 약 +4시간 추정 밀/썰물 위상
 }
 /* ----- 조류세기: KHOA 수치조류도 예측 유향·유속 (인천 지점) ----- */
 // 인천 최근접 격자점의 유속(cm/s) 추출

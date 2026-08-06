@@ -50,12 +50,15 @@ Require-Match $html '행주 수위 ''\+ll\.lagMin\+''분 먼저 변함 · 조석
 Require-Match $html '한강대교 수위 ''\+Math\.abs\(ll\.lagMin\)\+''분 먼저 변함 · 방류 영향 추정' '일반 화면의 한강대교 시간차가 쉬운 표현으로 표시됨'
 Require-Match $html '\.flow-nowrap\{white-space:nowrap\}' '시간차 문구 내부의 줄바꿈을 방지함'
 Require-Match $html 'function flowVerdict\(bfDir,hgDir,ph\)' '역류 방향 판정이 별도 함수로 분리됨'
-Require-Match $html "matches===1[\s\S]+out\('up','🔺 상류 흐름 가능성'[\s\S]+out\('down','🔻 하류 흐름 가능성'" '밀물·썰물 방향 가능성을 대칭적으로 판정함'
-Require-Match $html "opposites>0[\s\S]+out\('up','🔺 상류 방향 예상'[\s\S]+out\('down','🔻 하류 방향 예상'" '수위 변화가 물때와 반대여도 예상 방향을 표시함'
+Require-Match $html "matches===1[\s\S]+out\('up','🔺 역류 가능성'[\s\S]+out\('down','🔻 하류 흐름 가능성'" '밀물·썰물 방향 가능성을 대칭적으로 판정함'
 Require-Match $html "if\(v\.segmentDiff\) evid\.push\('두 지점의 수위 변화가 다름'\)" '두 다리의 수위 변화 방향이 다름을 안내함'
-Require-Match $html "if\(v\.lowConfidence\) evid\.push\('수위 변화와 맞지 않아 신뢰 낮음'\)" '예상 방향의 낮은 신뢰도를 안내함'
+Require-NoMatch $html '상류 방향 예상|하류 방향 예상|lowConfidence' '물때만으로 흐름 방향을 강제하지 않음'
+Require-NoMatch $html "else if\(!bothFlat\)[\s\S]+bfDir===hgDir" '물때가 없을 때 수위만으로 방향을 강제하지 않음'
 Require-Match $html '⏸ 수위 변화 작음' '두 다리 모두 작은 변화인 상태를 별도로 표시함'
 Require-Match $html '↕ 흐름 방향 판단 어려움' '물때와 수위 근거가 맞지 않는 상태를 별도로 표시함'
+Require-Match $html 'tidePhaseNow\(phaseList,TIDE\.lagMin\)' '역류 판정이 여의도 약 4시간 지연 물때를 사용함'
+Require-Match $html "evid\.push\('여의도 '[\s\S]+\+' 추정'\)" '역류 근거줄이 여의도 추정 물때임을 표시함'
+Require-Match $html '실제 물의 유속·방향을 직접 측정한 값은 아닙니다' '수위·물때 판정의 한계를 도움말에 안내함'
 Require-Match $html '실제 물이 멈췄다는 뜻은 아닙니다' '수위 추세 판정의 한계를 도움말에 안내함'
 Require-Match $html 'bothFresh=flowRowsFresh\(flow\.bfRows\)&&flowRowsFresh\(flow\.hgRows\)' '두 관측소가 모두 신선할 때만 역류 판정을 허용함'
 Require-Match $html '수위 자료가 오래되어 판정 보류' '오래된 수위의 판정 보류 안내가 있음'
@@ -107,18 +110,18 @@ if (-not $NodePath -or -not (Test-Path -LiteralPath $NodePath)) {
   } else {
     $flowCases = @'
 const cases = [
-  ['사진 상황', 'up', 'down', 'ebb', 'down', '하류 흐름 가능성', true, false],
-  ['정반대 상황', 'down', 'up', 'flood', 'up', '상류 흐름 가능성', true, false],
-  ['두 다리 하강', 'down', 'down', 'ebb', 'down', '순류', false, false],
-  ['두 다리 상승', 'up', 'up', 'flood', 'up', '역류 경향', false, false],
-  ['두 다리 변화 작음', 'flat', 'flat', 'ebb', 'flat', '수위 변화 작음', false, false],
-  ['썰물·두 다리 상승', 'up', 'up', 'ebb', 'down', '하류 방향 예상', false, true],
-  ['밀물·두 다리 하강', 'down', 'down', 'flood', 'up', '상류 방향 예상', false, true],
-  ['물때 없음·방향 불일치', 'up', 'down', null, 'flat', '흐름 방향 판단 어려움', false, false]
+  ['한쪽만 썰물 방향', 'up', 'down', 'ebb', 'down', '하류 흐름 가능성', true],
+  ['한쪽만 밀물 방향', 'down', 'up', 'flood', 'up', '역류 가능성', true],
+  ['두 다리 하강', 'down', 'down', 'ebb', 'down', '하류 흐름 가능성', false],
+  ['두 다리 상승', 'up', 'up', 'flood', 'up', '역류 가능성', false],
+  ['두 다리 변화 작음', 'flat', 'flat', 'ebb', 'flat', '수위 변화 작음', false],
+  ['썰물·두 다리 상승', 'up', 'up', 'ebb', 'flat', '흐름 방향 판단 어려움', false],
+  ['밀물·두 다리 하강', 'down', 'down', 'flood', 'flat', '흐름 방향 판단 어려움', false],
+  ['물때 없음·두 다리 상승', 'up', 'up', null, 'flat', '흐름 방향 판단 어려움', false]
 ];
 for (const c of cases) {
   const r = flowVerdict(c[1], c[2], c[3]);
-  if (r.cls !== c[4] || !r.text.includes(c[5]) || r.segmentDiff !== c[6] || r.lowConfidence !== c[7]) {
+  if (r.cls !== c[4] || !r.text.includes(c[5]) || r.segmentDiff !== c[6]) {
     throw new Error(c[0] + ': ' + JSON.stringify(r));
   }
 }
@@ -131,6 +134,39 @@ for (const c of cases) {
       else { Fail ("상·하류 대칭 판정 합성 사례: " + ($flowOutput -join ' ')) }
     } finally {
       if (Test-Path -LiteralPath $tempFlowJs) { Remove-Item -LiteralPath $tempFlowJs -Force }
+    }
+  }
+
+  # 인천 물때를 여의도 추정 시각(+4시간)으로 옮긴 위상 검사
+  $phaseFunction = [regex]::Match($html, '(?s)function tidePhaseNow\(list,shiftMin,nowKstMs\)\{.*?\r?\n\}(?=\r?\n// 두 관측소)')
+  if (-not $phaseFunction.Success) {
+    Fail '여의도 물때 위상 합성 검사용 함수 추출'
+  } else {
+    $phaseCases = @'
+const tides = [
+  {ymd:'2026-08-06',hm:'03:22',high:false},
+  {ymd:'2026-08-06',hm:'09:13',high:true},
+  {ymd:'2026-08-06',hm:'15:42',high:false},
+  {ymd:'2026-08-06',hm:'22:03',high:true}
+];
+const cases = [
+  ['13:13 만조 전', '2026-08-06T12:00:00Z', 'flood'],
+  ['13:13 만조 후', '2026-08-06T14:00:00Z', 'ebb'],
+  ['19:42 간조 후', '2026-08-06T20:00:00Z', 'flood']
+];
+for (const c of cases) {
+  const actual = tidePhaseNow(tides, 240, Date.parse(c[1]));
+  if (actual !== c[2]) throw new Error(c[0] + ': ' + actual);
+}
+'@
+    $tempPhaseJs = Join-Path ([IO.Path]::GetTempPath()) ("hangang-phase-check-{0}.js" -f [guid]::NewGuid())
+    try {
+      [IO.File]::WriteAllText($tempPhaseJs, ($phaseFunction.Value + "`n" + $phaseCases), (New-Object Text.UTF8Encoding($false)))
+      $phaseOutput = & $NodePath $tempPhaseJs 2>&1
+      if ($LASTEXITCODE -eq 0) { Pass '여의도 약 +4시간 물때 위상 합성 사례 3종' }
+      else { Fail ("여의도 물때 위상 합성 사례: " + ($phaseOutput -join ' ')) }
+    } finally {
+      if (Test-Path -LiteralPath $tempPhaseJs) { Remove-Item -LiteralPath $tempPhaseJs -Force }
     }
   }
 }
