@@ -45,18 +45,18 @@ Require-Match $html 'syncFlowTuningText\(\)' '시작할 때 역류 조정값을 
 Require-Match $html 'function hourlyChange\(rows\)[\s\S]+target=t1-60\*60000[\s\S]+rows\[0\]\.wl-rows\[i\]\.wl' '다리 옆 수위 변화가 최신값과 정확히 1시간 전 값의 차이로 계산됨'
 Require-Match $html 'if\(t===target\)[\s\S]+if\(t!=null&&t<target\) break' '정확히 1시간 전 관측이 없으면 변화량을 추정하지 않음'
 Require-Match $html "cm\+'cm/1h'" '다리 옆 실제 1시간 변화량 단위가 명확히 표시됨'
-Require-Match $html '한강 수위 · 판정 30분' '카드 제목이 30분 판정과 1시간 변화 표시를 구분함'
-Require-Match $html '행주 ''\+ll\.lagMin\+''분 먼저 변함\(조석 추정\)' '일반 화면의 행주 시간차가 쉬운 표현으로 표시됨'
-Require-Match $html '한강대교 ''\+Math\.abs\(ll\.lagMin\)\+''분 먼저 변함\(방류 추정\)' '일반 화면의 한강대교 시간차가 쉬운 표현으로 표시됨'
+Require-Match $html '한강 수위 · 최근 30분 판정' '카드 제목이 30분 판정과 1시간 변화 표시를 구분함'
+Require-Match $html '행주 수위 ''\+ll\.lagMin\+''분 먼저 변함 · 조석 영향 추정' '일반 화면의 행주 시간차가 쉬운 표현으로 표시됨'
+Require-Match $html '한강대교 수위 ''\+Math\.abs\(ll\.lagMin\)\+''분 먼저 변함 · 방류 영향 추정' '일반 화면의 한강대교 시간차가 쉬운 표현으로 표시됨'
 Require-Match $html '\.flow-nowrap\{white-space:nowrap\}' '시간차 문구 내부의 줄바꿈을 방지함'
 Require-Match $html 'function flowVerdict\(bfDir,hgDir,ph\)' '역류 방향 판정이 별도 함수로 분리됨'
 Require-Match $html "matches===1[\s\S]+out\('up','🔺 상류 흐름 가능성'[\s\S]+out\('down','🔻 하류 흐름 가능성'" '밀물·썰물 방향 가능성을 대칭적으로 판정함'
-Require-Match $html "if\(v\.segmentDiff\) evid\.push\('지점별 흐름 차이'\)" '두 다리 방향이 반대면 지점별 흐름 차이를 안내함'
+Require-Match $html "if\(v\.segmentDiff\) evid\.push\('두 지점의 수위 변화가 다름'\)" '두 다리의 수위 변화 방향이 다름을 안내함'
 Require-Match $html '⏸ 수위 변화 작음' '두 다리 모두 작은 변화인 상태를 별도로 표시함'
-Require-Match $html '↕ 방향 엇갈림·판정 불확실' '물때와 수위 근거가 맞지 않는 상태를 별도로 표시함'
+Require-Match $html '↕ 관측 방향이 달라 판단 어려움' '물때와 수위 근거가 맞지 않는 상태를 별도로 표시함'
 Require-Match $html '실제 물이 멈췄다는 뜻은 아닙니다' '수위 추세 판정의 한계를 도움말에 안내함'
 Require-Match $html 'bothFresh=flowRowsFresh\(flow\.bfRows\)&&flowRowsFresh\(flow\.hgRows\)' '두 관측소가 모두 신선할 때만 역류 판정을 허용함'
-Require-Match $html '수위 자료 오래됨 · 역류 판정 중단' '오래된 수위의 판정 중단 안내가 있음'
+Require-Match $html '수위 자료가 오래되어 판정 보류' '오래된 수위의 판정 보류 안내가 있음'
 
 # 장애 대응과 호출 최적화
 Require-Match $html 'REQUEST_TIMEOUT=\{ hrfco:8000, tide:3000, tidecur:6000 \}' 'API별 최대 대기시간이 설정됨'
@@ -110,7 +110,7 @@ const cases = [
   ['두 다리 하강', 'down', 'down', 'ebb', 'down', '순류', false],
   ['두 다리 상승', 'up', 'up', 'flood', 'up', '역류 경향', false],
   ['두 다리 변화 작음', 'flat', 'flat', 'ebb', 'flat', '수위 변화 작음', false],
-  ['물때와 수위 불일치', 'up', 'up', 'ebb', 'flat', '방향 엇갈림', false]
+  ['물때와 수위 불일치', 'up', 'up', 'ebb', 'flat', '관측 방향이 달라 판단 어려움', false]
 ];
 for (const c of cases) {
   const r = flowVerdict(c[1], c[2], c[3]);
