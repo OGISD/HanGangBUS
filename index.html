@@ -370,11 +370,13 @@
       <div class="q">‘한강 수위’ 카드는 뭔가요?</div>
       <div class="a">행주대교와 한강대교의 실시간 수위를 좌우로 나란히 보여 줍니다(최근 30분 3개, ‘과거 4시간 기록’ 펼치기 가능). 한강 <b>역류</b>(밀물이 상류로 거슬러 오르는 현상) 감시에 참고합니다. <b>한강대교</b>는 마포대교 지점에 수위 관측소가 없어, 가장 가까운(<span class="num">≈3 km</span> 상류, 수위 사실상 동일) 한강대교 값을 대신 씁니다.</div>
 
-      <div class="q">‘🔺 역류 경향’ · ‘🔻 순류’ · <span class="flow-nowrap">‘⏸ 수위 변화 작음·판정 불확실’</span>은 무슨 뜻인가요?</div>
+      <div class="q">역류 카드의 방향 판정은 어떻게 보나요?</div>
       <div class="a">한강 수위 카드 맨 위 배지로, 지금 한강 물이 <b>어느 쪽으로 흐르는 경향</b>인지 보여 줍니다.<br>
-        · <b>🔺 역류 경향</b> — 밀물이 바다에서 한강 <b>상류로</b> 밀고 올라오는 흐름. 한강대교까지 올라오면 ‘여의도까지’가 붙습니다.<br>
-        · <b>🔻 순류</b> — 강물이 원래 방향인 <b>하류(바다 쪽)</b>로 빠지는 흐름.<br>
-        · <b>⏸ 수위 변화 작음·판정 불확실</b> — 수위 변화가 작거나 근거가 서로 엇갈려 방향을 정하기 어렵다는 뜻입니다. <b>실제 물이 멈췄다는 뜻은 아닙니다.</b><br>
+        · <b>🔺 역류 경향 / 상류 이동 가능</b> — 밀물과 다리 수위 상승이 맞으면 상류 방향으로 봅니다. 두 다리가 모두 상승하면 역류 경향, 한쪽만 맞으면 상류 이동 가능으로 낮춰 표시합니다.<br>
+        · <b>🔻 순류 / 하류 이동 가능</b> — 썰물과 다리 수위 하강이 맞으면 하류 방향으로 봅니다. 두 다리가 모두 하강하면 순류, 한쪽만 맞으면 하류 이동 가능으로 낮춰 표시합니다.<br>
+        · <b>구간 차이 가능</b> — 한 다리는 상승하고 다른 다리는 하강할 때 함께 표시합니다.<br>
+        · <b>⏸ 수위 변화 작음</b> — 두 다리 모두 수위 변화가 작다는 뜻이며, <b>실제 물이 멈췄다는 뜻은 아닙니다.</b><br>
+        · <b>↕ 방향 엇갈림·판정 불확실</b> — 물때와 수위 변화가 맞지 않아 방향을 정하기 어렵다는 뜻입니다.<br>
         판정은 <b>두 다리의 수위 추세 + 인천 물때(밀물/썰물)</b>를 함께 봐서 내리며, 배지 아래 작은 글씨가 그 근거입니다.<br>
         ⚠ 실측 검증 전이라 단정하지 않고 <b>‘경향’</b>으로만 표시합니다.</div>
 
@@ -843,6 +845,36 @@ function flowRowsAge(rows){
 function flowRowsFresh(rows){
   var age=flowRowsAge(rows); return age!=null&&age<STALE_MIN;
 }
+// 밀물/썰물과 두 관측소 방향을 대칭적으로 판정한다. 한쪽만 물때와 맞으면 '이동 가능'으로 낮춰 표시.
+function flowVerdict(bfDir,hgDir,ph){
+  var phaseDir=ph==='flood'?'up':ph==='ebb'?'down':null;
+  var dirs=[bfDir,hgDir], bothFlat=bfDir==='flat'&&hgDir==='flat', i, matches=0, opposites=0;
+  var out=function(cls,text,segmentDiff,nowrap){return {cls:cls,text:text,segmentDiff:segmentDiff,nowrap:nowrap};};
+  if(phaseDir){
+    for(i=0;i<dirs.length;i++){
+      if(dirs[i]===phaseDir) matches++;
+      else if(dirs[i]!=='flat') opposites++;
+    }
+    if(matches===2) return phaseDir==='up'
+      ? out('up','🔺 역류 경향 · 바다→한강(상류, 여의도까지)',false,false)
+      : out('down','🔻 순류 · 한강→바다(하류)',false,false);
+    if(matches===1) return phaseDir==='up'
+      ? out('up','🔺 상류 이동 가능',opposites>0,true)
+      : out('down','🔻 하류 이동 가능',opposites>0,true);
+  }else if(!bothFlat){
+    if(bfDir===hgDir) return bfDir==='up'
+      ? out('up','🔺 상류 이동 가능',false,true)
+      : out('down','🔻 하류 이동 가능',false,true);
+    if(bfDir==='flat'&&hgDir!=='flat') return hgDir==='up'
+      ? out('up','🔺 상류 이동 가능',false,true)
+      : out('down','🔻 하류 이동 가능',false,true);
+    if(hgDir==='flat'&&bfDir!=='flat') return bfDir==='up'
+      ? out('up','🔺 상류 이동 가능',false,true)
+      : out('down','🔻 하류 이동 가능',false,true);
+  }
+  if(bothFlat) return out('flat','⏸ 수위 변화 작음',false,true);
+  return out('flat','↕ 방향 엇갈림·판정 불확실',false,true);
+}
 function renderFlow(){
   var badge=$('flowBadge'); if(!badge) return;
   var bothFresh=flowRowsFresh(flow.bfRows)&&flowRowsFresh(flow.hgRows);
@@ -867,18 +899,10 @@ function renderFlow(){
   // 원인은 시간차로 미루어 짐작하는 것이라 '추정'을 명시(확정 아님)
   if(ll&&ll.lead==='bf') evid.push('<span class="flow-nowrap">행주 '+ll.lagMin+'분 먼저 변함(조석 추정)</span>');
   else if(ll&&ll.lead==='hg') evid.push('<span class="flow-nowrap">한강대교 '+Math.abs(ll.lagMin)+'분 먼저 변함(방류 추정)</span>');
-  var verdict, cls;
-  if(bf.dir==='up' && (ph==='flood'||ph==null)){
-    cls='up'; verdict='🔺 역류 경향 · 바다→한강(상류)';
-    if(hg&&hg.dir==='up') verdict='🔺 역류 경향 · 바다→한강(상류, 여의도까지)';
-    if(ll&&ll.lead==='hg') verdict+=' · 상류(방류) 영향 가능';   // 시간차가 반대 방향이면 단정 낮춤
-  } else if(bf.dir==='down' && (ph==='ebb'||ph==null)){
-    cls='down'; verdict='🔻 순류 · 한강→바다(하류)';
-  } else {
-    cls='flat'; verdict='<span class="flow-nowrap">⏸ 수위 변화 작음·판정 불확실</span>';
-  }
-  badge.className='flowbadge '+cls;
-  badge.innerHTML=verdict+'<span class="sub">'+evid.join(' · ')+'</span>';
+  var v=flowVerdict(bf.dir,hg.dir,ph);
+  if(v.segmentDiff) evid.push('구간 차이 가능');
+  badge.className='flowbadge '+v.cls;
+  badge.innerHTML=(v.nowrap?'<span class="flow-nowrap">'+v.text+'</span>':v.text)+'<span class="sub">'+evid.join(' · ')+'</span>';
   setFlowDiag(ll);
 }
 // 관리자 전용 진단줄: 판정에 쓴 원시 수치를 그대로 노출(실제 역류 목격 시 캡처 → 임계값 보정 근거)
