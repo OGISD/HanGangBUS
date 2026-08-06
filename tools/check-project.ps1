@@ -46,6 +46,9 @@ Require-Match $html 'function hourlyChange\(rows\)[\s\S]+target=t1-60\*60000[\s\
 Require-Match $html 'if\(t===target\)[\s\S]+if\(t!=null&&t<target\) break' '정확히 1시간 전 관측이 없으면 변화량을 추정하지 않음'
 Require-Match $html "cm\+'cm/1h'" '다리 옆 실제 1시간 변화량 단위가 명확히 표시됨'
 Require-Match $html '한강 수위 · 판정 30분' '카드 제목이 30분 판정과 1시간 변화 표시를 구분함'
+Require-Match $html '행주 ''\+ll\.lagMin\+''분 먼저 변함\(조석 추정\)' '일반 화면의 행주 시간차가 쉬운 표현으로 표시됨'
+Require-Match $html '한강대교 ''\+Math\.abs\(ll\.lagMin\)\+''분 먼저 변함\(방류 추정\)' '일반 화면의 한강대교 시간차가 쉬운 표현으로 표시됨'
+Require-Match $html '\.flow-nowrap\{white-space:nowrap\}' '시간차 문구 내부의 줄바꿈을 방지함'
 Require-Match $html 'bothFresh=flowRowsFresh\(flow\.bfRows\)&&flowRowsFresh\(flow\.hgRows\)' '두 관측소가 모두 신선할 때만 역류 판정을 허용함'
 Require-Match $html '수위 자료 오래됨 · 역류 판정 중단' '오래된 수위의 판정 중단 안내가 있음'
 

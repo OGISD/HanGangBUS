@@ -146,6 +146,7 @@
   .flowbadge{margin:2px 0 10px;padding:8px 10px;border-radius:10px;font-size:13px;font-weight:700;
     text-align:center;line-height:1.45;border:1px solid var(--line);color:var(--muted)}
   .flowbadge .sub{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-top:2px}
+  .flow-nowrap{white-space:nowrap}
   .flowbadge.up{background:rgba(214,90,70,.16);border-color:#7a3a30;color:#ffb9a8}
   .flowbadge.down{background:rgba(60,130,180,.16);border-color:#2f5f80;color:#bfe0f5}
   .flowbadge.flat{background:rgba(255,255,255,.05);color:#cdd8e2}
@@ -377,10 +378,10 @@
         판정은 <b>두 다리의 수위 추세 + 인천 물때(밀물/썰물)</b>를 함께 봐서 내리며, 배지 아래 작은 글씨가 그 근거입니다.<br>
         ⚠ 실측 검증 전이라 단정하지 않고 <b>‘경향’</b>으로만 표시합니다.</div>
 
-      <div class="q">‘↑ 12cm/1h’, ‘행주 선행 N분(조석 영향 추정)’은 무슨 뜻인가요?</div>
+      <div class="q">‘↑ 12cm/1h’, <span class="flow-nowrap">‘행주 N분 먼저 변함(조석 추정)’</span>은 무슨 뜻인가요?</div>
       <div class="a">· <b>↑ / ↓ / ↔ 숫자cm/1h</b> — 최신 관측 수위와 <b>정확히 1시간 전 관측 수위의 실제 차이</b>입니다. 30분 변화량을 두 배로 늘린 값이 아니며, 정확히 1시간 전 자료가 없으면 표시하지 않습니다.<br>
         · <b>역류 판정</b> — 위의 1시간 변화 표시와 별도로, 최근 <b><span data-flow-window></span>분</b> 수위 흐름을 계산합니다. 시간당 기울기가 <span class="num">±<span data-flow-dead-rate></span> cm/h</span> 안쪽이면 변화 없음으로 봅니다.<br>
-        · <b>‘행주 선행 N분’</b> — 두 다리 중 <b>어느 쪽이 먼저 움직였는지</b>입니다. 바다에 가까운 <b>행주가 먼저</b> 움직였으면 바닷물(조석) 때문일 가능성이, 상류의 <b>한강대교가 먼저</b>면 팔당댐 <b>방류</b> 때문일 가능성이 큽니다. 다만 시간차로 미루어 짐작한 것이라 <b>‘추정’</b>이라고 적습니다. 물이 잔잔할 때는 이 항목이 아예 나오지 않습니다.</div>
+        · <b>‘행주 N분 먼저 변함’</b> — 두 다리 중 <b>어느 쪽 수위가 먼저 변했는지</b>입니다. 바다에 가까운 <b>행주가 먼저</b> 변했으면 바닷물(조석) 때문일 가능성이, 상류의 <b>한강대교가 먼저</b>면 팔당댐 <b>방류</b> 때문일 가능성이 큽니다. 다만 시간차로 미루어 짐작한 것이라 <b>‘추정’</b>이라고 적습니다. 물이 잔잔할 때는 이 항목이 아예 나오지 않습니다.</div>
 
       <div class="q">물때(만조·간조)는 어떻게 보나요?</div>
       <div class="a"><b>인천</b> 칸은 오늘 만조·간조를 모두, <b>여의도</b> 칸은 인천 만조 시각을 <b>약 4시간 뒤로 옮긴 추정값</b>으로 만조만 보여 줍니다. 실제 시각은 기상·유량 등에 따라 달라질 수 있습니다. 각 줄에 <b>▲만조/▼간조</b> 화살표와 <b>직전 물때 대비 증감</b>(cm, 내려가면 음수)을 함께 표시합니다. 카드 오른쪽 위의 <b>온라인</b>은 공공 API 조석예보, <b>연간표</b>는 API 장애 때 사용하는 국립해양조사원 연간 조석표입니다.</div>
@@ -864,8 +865,8 @@ function renderFlow(){
   evid.push('행주 '+(bf.dir==='up'?'↑':bf.dir==='down'?'↓':'↔'));
   if(hg) evid.push('한강대교 '+(hg.dir==='up'?'↑':hg.dir==='down'?'↓':'↔'));
   // 원인은 시간차로 미루어 짐작하는 것이라 '추정'을 명시(확정 아님)
-  if(ll&&ll.lead==='bf') evid.push('행주 선행 '+ll.lagMin+'분(조석 영향 추정)');
-  else if(ll&&ll.lead==='hg') evid.push('한강대교 선행 '+Math.abs(ll.lagMin)+'분(방류 영향 추정)');
+  if(ll&&ll.lead==='bf') evid.push('<span class="flow-nowrap">행주 '+ll.lagMin+'분 먼저 변함(조석 추정)</span>');
+  else if(ll&&ll.lead==='hg') evid.push('<span class="flow-nowrap">한강대교 '+Math.abs(ll.lagMin)+'분 먼저 변함(방류 추정)</span>');
   var verdict, cls;
   if(bf.dir==='up' && (ph==='flood'||ph==null)){
     cls='up'; verdict='🔺 역류 경향 · 바다→한강(상류)';
@@ -890,10 +891,11 @@ function setFlowDiag(ll){
   if(bf) p.push('행주 '+sgn(bf.rate)+'cm/h('+bf.mins+'분·'+bf.pts+'점)');
   if(hg) p.push('한강대교 '+sgn(hg.rate)+'cm/h('+hg.mins+'분·'+hg.pts+'점)');
   p.push('임계 ±'+FLOW.deadRate+'cm/h');
-  if(ll) p.push('선행 '+(ll.lead==='bf'?'행주':ll.lead==='hg'?'한강대교':'—')+' '+sgn(ll.lagMin)+'분'+
-    ' · 상관 '+ll.corr.toFixed(2)+' · 진폭 '+ll.ampCm+'cm · '+ll.cnt+'쌍'+
-    (ll.lead==='unknown'?' → 보류(진폭<'+FLOW.minAmpCm+' 또는 상관<'+FLOW.minCorr+')':''));
-  else p.push('선행 계산 불가(데이터 부족)');
+  if(ll){
+    var leadText=ll.lead==='bf'?'행주 '+ll.lagMin+'분 먼저':ll.lead==='hg'?'한강대교 '+Math.abs(ll.lagMin)+'분 먼저':'보류';
+    p.push('시간차 '+leadText+' · 상관 '+ll.corr.toFixed(2)+' · 진폭 '+ll.ampCm+'cm · '+ll.cnt+'쌍'+
+      (ll.lead==='unknown'?'(진폭<'+FLOW.minAmpCm+' 또는 상관<'+FLOW.minCorr+')':''));
+  }else p.push('시간차 계산 불가(데이터 부족)');
   p.push('위상 '+(flow.tide==='flood'?'밀물':flow.tide==='ebb'?'썰물':'—'));
   el.textContent=p.join(' · ');
 }
