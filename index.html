@@ -377,7 +377,8 @@
         · <b>🔻 순류 / 하류 흐름 가능성</b> — 썰물과 다리 수위 하강이 맞으면 하류 방향으로 봅니다. 두 다리가 모두 하강하면 순류, 한쪽만 맞으면 하류 흐름 가능성으로 낮춰 표시합니다.<br>
         · <b>두 지점의 수위 변화가 다름</b> — 한 다리는 상승하고 다른 다리는 하강할 때 함께 표시합니다.<br>
         · <b>⏸ 수위 변화 작음</b> — 두 다리 모두 수위 변화가 작다는 뜻이며, <b>실제 물이 멈췄다는 뜻은 아닙니다.</b><br>
-        · <b>↕ 흐름 방향 판단 어려움</b> — 물때와 수위 변화가 맞지 않아 방향을 정하기 어렵다는 뜻입니다.<br>
+        · <b>🔺 상류 방향 예상 / 🔻 하류 방향 예상</b> — 물때와 수위 변화가 맞지 않아도 물때를 기준으로 예상 방향을 보여 줍니다. 이때는 근거줄에 <b>신뢰 낮음</b>을 함께 표시합니다.<br>
+        · <b>↕ 흐름 방향 판단 어려움</b> — 물때 정보가 없고 두 다리의 수위 방향도 서로 다를 때만 표시합니다.<br>
         판정은 <b>두 다리의 수위 추세 + 인천 물때(밀물/썰물)</b>를 함께 봐서 내리며, 배지 아래 작은 글씨가 그 근거입니다.<br>
         ⚠ 실측 검증 전이라 단정하지 않고 <b>‘경향’</b>으로만 표시합니다.</div>
 
@@ -846,11 +847,13 @@ function flowRowsAge(rows){
 function flowRowsFresh(rows){
   var age=flowRowsAge(rows); return age!=null&&age<STALE_MIN;
 }
-// 밀물/썰물과 두 관측소 방향을 대칭적으로 판정한다. 한쪽만 물때와 맞으면 '흐름 가능성'으로 낮춰 표시.
+// 밀물/썰물과 두 관측소 방향을 대칭적으로 판정한다. 수위 방향이 모두 반대여도 물때 기준 예상 방향은 표시한다.
 function flowVerdict(bfDir,hgDir,ph){
   var phaseDir=ph==='flood'?'up':ph==='ebb'?'down':null;
   var dirs=[bfDir,hgDir], bothFlat=bfDir==='flat'&&hgDir==='flat', i, matches=0, opposites=0;
-  var out=function(cls,text,segmentDiff,nowrap){return {cls:cls,text:text,segmentDiff:segmentDiff,nowrap:nowrap};};
+  var out=function(cls,text,segmentDiff,nowrap,lowConfidence){return {
+    cls:cls,text:text,segmentDiff:segmentDiff,nowrap:nowrap,lowConfidence:!!lowConfidence
+  };};
   if(phaseDir){
     for(i=0;i<dirs.length;i++){
       if(dirs[i]===phaseDir) matches++;
@@ -862,6 +865,9 @@ function flowVerdict(bfDir,hgDir,ph){
     if(matches===1) return phaseDir==='up'
       ? out('up','🔺 상류 흐름 가능성',opposites>0,true)
       : out('down','🔻 하류 흐름 가능성',opposites>0,true);
+    if(!bothFlat&&opposites>0) return phaseDir==='up'
+      ? out('up','🔺 상류 방향 예상',false,true,true)
+      : out('down','🔻 하류 방향 예상',false,true,true);
   }else if(!bothFlat){
     if(bfDir===hgDir) return bfDir==='up'
       ? out('up','🔺 상류 흐름 가능성',false,true)
@@ -893,15 +899,16 @@ function renderFlow(){
     setFlowDiag(null); return;
   }
   var ll=leadLag(flow.bfRows, flow.hgRows);   // 누가 먼저 움직였나(조석 영향 추정 vs 방류 영향 추정)
+  var v=flowVerdict(bf.dir,hg.dir,ph);
   var evid=[];
-  if(ph) evid.push('인천 '+(ph==='flood'?'밀물':'썰물'));
+  if(ph) evid.push('인천 '+(ph==='flood'?'밀물':'썰물')+(v.lowConfidence?' 기준':''));
   evid.push('행주 '+(bf.dir==='up'?'↑':bf.dir==='down'?'↓':'↔'));
   if(hg) evid.push('한강대교 '+(hg.dir==='up'?'↑':hg.dir==='down'?'↓':'↔'));
   // 원인은 시간차로 미루어 짐작하는 것이라 '추정'을 명시(확정 아님)
   if(ll&&ll.lead==='bf') evid.push('<span class="flow-nowrap">행주 수위 '+ll.lagMin+'분 먼저 변함 · 조석 영향 추정</span>');
   else if(ll&&ll.lead==='hg') evid.push('<span class="flow-nowrap">한강대교 수위 '+Math.abs(ll.lagMin)+'분 먼저 변함 · 방류 영향 추정</span>');
-  var v=flowVerdict(bf.dir,hg.dir,ph);
   if(v.segmentDiff) evid.push('두 지점의 수위 변화가 다름');
+  if(v.lowConfidence) evid.push('수위 변화와 맞지 않아 신뢰 낮음');
   badge.className='flowbadge '+v.cls;
   badge.innerHTML=(v.nowrap?'<span class="flow-nowrap">'+v.text+'</span>':v.text)+'<span class="sub">'+evid.join(' · ')+'</span>';
   setFlowDiag(ll);

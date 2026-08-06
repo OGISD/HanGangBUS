@@ -51,7 +51,9 @@ Require-Match $html '한강대교 수위 ''\+Math\.abs\(ll\.lagMin\)\+''분 먼�
 Require-Match $html '\.flow-nowrap\{white-space:nowrap\}' '시간차 문구 내부의 줄바꿈을 방지함'
 Require-Match $html 'function flowVerdict\(bfDir,hgDir,ph\)' '역류 방향 판정이 별도 함수로 분리됨'
 Require-Match $html "matches===1[\s\S]+out\('up','🔺 상류 흐름 가능성'[\s\S]+out\('down','🔻 하류 흐름 가능성'" '밀물·썰물 방향 가능성을 대칭적으로 판정함'
+Require-Match $html "opposites>0[\s\S]+out\('up','🔺 상류 방향 예상'[\s\S]+out\('down','🔻 하류 방향 예상'" '수위 변화가 물때와 반대여도 예상 방향을 표시함'
 Require-Match $html "if\(v\.segmentDiff\) evid\.push\('두 지점의 수위 변화가 다름'\)" '두 다리의 수위 변화 방향이 다름을 안내함'
+Require-Match $html "if\(v\.lowConfidence\) evid\.push\('수위 변화와 맞지 않아 신뢰 낮음'\)" '예상 방향의 낮은 신뢰도를 안내함'
 Require-Match $html '⏸ 수위 변화 작음' '두 다리 모두 작은 변화인 상태를 별도로 표시함'
 Require-Match $html '↕ 흐름 방향 판단 어려움' '물때와 수위 근거가 맞지 않는 상태를 별도로 표시함'
 Require-Match $html '실제 물이 멈췄다는 뜻은 아닙니다' '수위 추세 판정의 한계를 도움말에 안내함'
@@ -105,16 +107,18 @@ if (-not $NodePath -or -not (Test-Path -LiteralPath $NodePath)) {
   } else {
     $flowCases = @'
 const cases = [
-  ['사진 상황', 'up', 'down', 'ebb', 'down', '하류 흐름 가능성', true],
-  ['정반대 상황', 'down', 'up', 'flood', 'up', '상류 흐름 가능성', true],
-  ['두 다리 하강', 'down', 'down', 'ebb', 'down', '순류', false],
-  ['두 다리 상승', 'up', 'up', 'flood', 'up', '역류 경향', false],
-  ['두 다리 변화 작음', 'flat', 'flat', 'ebb', 'flat', '수위 변화 작음', false],
-  ['물때와 수위 불일치', 'up', 'up', 'ebb', 'flat', '흐름 방향 판단 어려움', false]
+  ['사진 상황', 'up', 'down', 'ebb', 'down', '하류 흐름 가능성', true, false],
+  ['정반대 상황', 'down', 'up', 'flood', 'up', '상류 흐름 가능성', true, false],
+  ['두 다리 하강', 'down', 'down', 'ebb', 'down', '순류', false, false],
+  ['두 다리 상승', 'up', 'up', 'flood', 'up', '역류 경향', false, false],
+  ['두 다리 변화 작음', 'flat', 'flat', 'ebb', 'flat', '수위 변화 작음', false, false],
+  ['썰물·두 다리 상승', 'up', 'up', 'ebb', 'down', '하류 방향 예상', false, true],
+  ['밀물·두 다리 하강', 'down', 'down', 'flood', 'up', '상류 방향 예상', false, true],
+  ['물때 없음·방향 불일치', 'up', 'down', null, 'flat', '흐름 방향 판단 어려움', false, false]
 ];
 for (const c of cases) {
   const r = flowVerdict(c[1], c[2], c[3]);
-  if (r.cls !== c[4] || !r.text.includes(c[5]) || r.segmentDiff !== c[6]) {
+  if (r.cls !== c[4] || !r.text.includes(c[5]) || r.segmentDiff !== c[6] || r.lowConfidence !== c[7]) {
     throw new Error(c[0] + ': ' + JSON.stringify(r));
   }
 }
@@ -123,7 +127,7 @@ for (const c of cases) {
     try {
       [IO.File]::WriteAllText($tempFlowJs, ($flowFunction.Value + "`n" + $flowCases), (New-Object Text.UTF8Encoding($false)))
       $flowOutput = & $NodePath $tempFlowJs 2>&1
-      if ($LASTEXITCODE -eq 0) { Pass '상·하류 대칭 판정 합성 사례 6종' }
+      if ($LASTEXITCODE -eq 0) { Pass '상·하류 대칭 판정 합성 사례 8종' }
       else { Fail ("상·하류 대칭 판정 합성 사례: " + ($flowOutput -join ' ')) }
     } finally {
       if (Test-Path -LiteralPath $tempFlowJs) { Remove-Item -LiteralPath $tempFlowJs -Force }
