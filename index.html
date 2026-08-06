@@ -372,8 +372,8 @@
 
       <div class="q">역류 카드의 방향 판정은 어떻게 보나요?</div>
       <div class="a">한강 수위 카드 맨 위 배지로, 지금 한강 물이 <b>어느 쪽으로 흐르는 경향</b>인지 보여 줍니다.<br>
-        · <b>🔺 역류 경향 / 상류 이동 가능</b> — 밀물과 다리 수위 상승이 맞으면 상류 방향으로 봅니다. 두 다리가 모두 상승하면 역류 경향, 한쪽만 맞으면 상류 이동 가능으로 낮춰 표시합니다.<br>
-        · <b>🔻 순류 / 하류 이동 가능</b> — 썰물과 다리 수위 하강이 맞으면 하류 방향으로 봅니다. 두 다리가 모두 하강하면 순류, 한쪽만 맞으면 하류 이동 가능으로 낮춰 표시합니다.<br>
+        · <b>🔺 역류 경향 / 상류 흐름 가능성</b> — 밀물과 다리 수위 상승이 맞으면 상류 방향으로 봅니다. 두 다리가 모두 상승하면 역류 경향, 한쪽만 맞으면 상류 흐름 가능성으로 낮춰 표시합니다.<br>
+        · <b>🔻 순류 / 하류 흐름 가능성</b> — 썰물과 다리 수위 하강이 맞으면 하류 방향으로 봅니다. 두 다리가 모두 하강하면 순류, 한쪽만 맞으면 하류 흐름 가능성으로 낮춰 표시합니다.<br>
         · <b>구간 차이 가능</b> — 한 다리는 상승하고 다른 다리는 하강할 때 함께 표시합니다.<br>
         · <b>⏸ 수위 변화 작음</b> — 두 다리 모두 수위 변화가 작다는 뜻이며, <b>실제 물이 멈췄다는 뜻은 아닙니다.</b><br>
         · <b>↕ 방향 엇갈림·판정 불확실</b> — 물때와 수위 변화가 맞지 않아 방향을 정하기 어렵다는 뜻입니다.<br>
@@ -845,7 +845,7 @@ function flowRowsAge(rows){
 function flowRowsFresh(rows){
   var age=flowRowsAge(rows); return age!=null&&age<STALE_MIN;
 }
-// 밀물/썰물과 두 관측소 방향을 대칭적으로 판정한다. 한쪽만 물때와 맞으면 '이동 가능'으로 낮춰 표시.
+// 밀물/썰물과 두 관측소 방향을 대칭적으로 판정한다. 한쪽만 물때와 맞으면 '흐름 가능성'으로 낮춰 표시.
 function flowVerdict(bfDir,hgDir,ph){
   var phaseDir=ph==='flood'?'up':ph==='ebb'?'down':null;
   var dirs=[bfDir,hgDir], bothFlat=bfDir==='flat'&&hgDir==='flat', i, matches=0, opposites=0;
@@ -859,18 +859,18 @@ function flowVerdict(bfDir,hgDir,ph){
       ? out('up','🔺 역류 경향 · 바다→한강(상류, 여의도까지)',false,false)
       : out('down','🔻 순류 · 한강→바다(하류)',false,false);
     if(matches===1) return phaseDir==='up'
-      ? out('up','🔺 상류 이동 가능',opposites>0,true)
-      : out('down','🔻 하류 이동 가능',opposites>0,true);
+      ? out('up','🔺 상류 흐름 가능성',opposites>0,true)
+      : out('down','🔻 하류 흐름 가능성',opposites>0,true);
   }else if(!bothFlat){
     if(bfDir===hgDir) return bfDir==='up'
-      ? out('up','🔺 상류 이동 가능',false,true)
-      : out('down','🔻 하류 이동 가능',false,true);
+      ? out('up','🔺 상류 흐름 가능성',false,true)
+      : out('down','🔻 하류 흐름 가능성',false,true);
     if(bfDir==='flat'&&hgDir!=='flat') return hgDir==='up'
-      ? out('up','🔺 상류 이동 가능',false,true)
-      : out('down','🔻 하류 이동 가능',false,true);
+      ? out('up','🔺 상류 흐름 가능성',false,true)
+      : out('down','🔻 하류 흐름 가능성',false,true);
     if(hgDir==='flat'&&bfDir!=='flat') return bfDir==='up'
-      ? out('up','🔺 상류 이동 가능',false,true)
-      : out('down','🔻 하류 이동 가능',false,true);
+      ? out('up','🔺 상류 흐름 가능성',false,true)
+      : out('down','🔻 하류 흐름 가능성',false,true);
   }
   if(bothFlat) return out('flat','⏸ 수위 변화 작음',false,true);
   return out('flat','↕ 방향 엇갈림·판정 불확실',false,true);
