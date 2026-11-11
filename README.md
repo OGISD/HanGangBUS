@@ -11,6 +11,7 @@
 
 - 잠수교·행주대교 통과높이와 운항 판정
 - 팔당댐 현재/4시간 전 방류량
+- 여의도 현재 풍향·풍속, 4시간 구간 기상예보, 서울서남권 특보·예비특보
 - 인천·여의도 물때와 조류세기
 - 행주대교·한강대교 수위 및 역류/순류 경향
 - API 장애 시 인천 연간 조석표 자동 백업
@@ -23,6 +24,7 @@
 - `data/tide-incheon-2026.json`, `data/tide-incheon-2027.json` — 물때 API 장애용 연간표
 - `tools/convert-tide.ps1` — 월별 조석표 ZIP을 연도별 JSON으로 변환
 - `tools/check-project.ps1` — 코드·확정값·연간 조석표를 한 번에 검사
+- `tools/check-weather.cjs` — 기상 날짜 경계·예보 집계·특보 필터·장애 복구 검사(일괄 검사에 포함)
 - `AI_HANDOFF.md` — 새 작업 세션 인수인계
 - `CLAUDE.md` — 상세 기술 사양과 확정값
 - `TASKS.md` — 작업 현황

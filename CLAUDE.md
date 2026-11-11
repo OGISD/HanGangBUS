@@ -236,6 +236,7 @@
 - 실제 역류 사례를 통한 판정 임계값 보정은 전문 검증이 가능할 때만 검토하는 선택 과제이며 현재 프로젝트의 필수 작업이 아님.
 
 ## 파일 구조
+- 기상 기능도 `index.html`에 유지. `tools/check-weather.cjs`는 날짜·집계·특보·장애 처리를 검증하는 개발용 검사.
 - `index.html` — 웹앱 로직·UI 전체. 실제 배포 진입점.
 - `data/tide-incheon-2026.json`, `data/tide-incheon-2027.json` — API 장애 시 쓰는 인천 연간 조석표 정적 백업.
 - `tools/convert-tide.ps1` — 국립해양조사원 월별 텍스트 ZIP을 검증해 연도별 JSON으로 변환. 원본 텍스트는 미커밋.
@@ -256,8 +257,25 @@ var CONFIG = {
 };
 ```
 - 교량 설정은 `DEFAULT_BRIDGES` 배열. 항목 추가하면 카드가 늘어남.
+- 기상은 `WEATHER`에서 `CONFIG.TIDE_KEY`와 동일한 공공데이터포털 키를 재사용함.
 - 설정은 guarded localStorage(키 `hb_*`, 교량은 `hb_bridges7`)에 저장. 막히면 메모리 폴백.
 - `lowWarn` 입력을 비우고 저장하면 `null`로 저장되어 저수위 경고가 실제로 해제됨.
+
+## 여의도 기상예보·특보(2026-11-11)
+
+- 팔당댐 아래 `#weatherCard`, 상단의 `#weatherAlert`. 일반적인 이름 `기상예보`를 사용하며 새 탭 없음.
+- `WEATHER`: 여의도 격자 `(59,126)`, 현재 관측 `getUltraSrtNcst`, 단기예보 `getVilageFcst`, 특보현황 `getPwnStatus`.
+- `weatherBase()`는 KST로 관측 발표와 하루 8회 단기예보 기준시각을 선택. 발표 직후 지연을 고려하고 실패하면 한 발표 전 자료 재시도.
+- `weatherItems()`는 JSON/XML과 결과코드를 확인. `weatherNumber()`는 빈 값·결측을 0으로 오인하지 않음.
+- `weatherGroups()`는 다음 24시간 예보를 4시간 구간으로 묶어 최대 시간별 풍속과 해당 풍향을 선택.
+  바람이 불어오는 방향을 16방위로 표시하며 순간최대풍속이 아님. 결측 구간·남은 시간 예보를 구분.
+- `weatherWarnings()`는 최신 현황의 t6(특보)·t7(예비특보)을 사용. `weatherWarningLines()`가 서울서남권·영등포·서울 전역만 필터링.
+  해제된 특보를 별도 누적하지 않으며 구역 제외 문구·알 수 없는 형식·빈 응답은 확인 불가로 처리. 원문은 HTML 이스케이프.
+- `fetchWeatherPart()`는 진행 중 요청 중복을 막고 관측 10분/특보 5분/예보 30분 또는 새 발표에 갱신.
+  최대 6초 요청, 오류 뒤 최소 1분 재시도. 성공 결과만 `hb_weather_v1`에 보관하며 5분 이내 캐시만 시작 때 복원.
+- 기상 타이머는 `setupWeatherTimer()`에서 분마다 갱신 필요 여부를 확인. 숨김 탭에서는 중지하며 자동/수동 모드 모두 기상 사용 가능.
+- 기상 호출은 `fetchAll()`의 핵심 Promise에 포함하지 않아 수위 새로고침 완료를 지연시키지 않음.
+- `tools/check-weather.cjs`는 실제 소스 함수를 추출해 날짜 경계·4시간 집계·특보 필터·실패/복구를 검사. 기존 `check-project.ps1`에서 실행.
 
 ## 설정 패널 잠금 (일반 방문자에게 숨김)
 - 설정 `<details id="setPanel">` 는 **기본 숨김**. 일반 방문자는 통과높이 카드만 봄.

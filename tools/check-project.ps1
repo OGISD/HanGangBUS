@@ -211,6 +211,11 @@ foreach ($spec in $tideSpecs) {
   }
 }
 
+if ($NodePath -and (Test-Path -LiteralPath $NodePath)) {
+  & $NodePath (Join-Path $PSScriptRoot 'check-weather.cjs')
+  if ($LASTEXITCODE -ne 0) { Fail '기상 날짜·집계·특보·장애 처리 검사' }
+}
+
 if ($failures.Count -gt 0) {
   Write-Host "`n총 $($failures.Count)개 검사가 실패했습니다." -ForegroundColor Red
   exit 1

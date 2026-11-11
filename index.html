@@ -83,6 +83,25 @@
   .badge{font-size:10.5px;font-weight:700;padding:3px 7px;border-radius:6px;background:rgba(245,177,61,.16);color:var(--caution)}
   .chead .t{margin-left:auto;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums;text-align:right;line-height:1.3}
   .chead .t.stale{color:var(--danger);font-weight:700}
+  .weather-alert{display:block;margin:0 0 12px;padding:9px 11px;border:1px solid #95662e;border-radius:10px;background:rgba(245,177,61,.12);color:#ffd9a3;font-size:12px;line-height:1.5;text-decoration:none}
+  .weather-alert[hidden]{display:none}
+  .weather-current{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px}
+  .weather-current .wind{font-size:20px;font-weight:750;white-space:nowrap}
+  .weather-current .wind small{font-size:12px;font-weight:500}
+  .weather-time,.weather-note{font-size:11px;color:var(--muted);line-height:1.5}
+  .weather-status{font-size:11px;line-height:1.5;padding:6px 0;border-top:1px solid var(--line);color:var(--muted)}
+  .weather-status.active,.weather-status.error{color:var(--caution)}
+  .weather-table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+  .weather-table th{font-size:10px;color:var(--muted);font-weight:500;text-align:left;padding:5px 0}
+  .weather-table td{padding:7px 0;border-top:1px solid var(--line);white-space:nowrap}
+  .weather-table th:last-child,.weather-table td:last-child{text-align:right}
+  .weather-table .date{font-size:10px;color:var(--muted);margin-right:4px}
+  .weather-detail{font-size:11px;color:var(--muted);line-height:1.55;margin-top:8px}
+  .weather-detail summary{cursor:pointer;padding:7px 0}
+  .weather-detail summary::after{content:"▼";font-size:11px}
+  .weather-detail[open] summary::after{content:"▲"}
+  .weather-detail pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;color:var(--text);margin:8px 0}
+  .weather-detail a{color:#9cd8ff}
 
   .scene{position:relative;height:120px;border-radius:13px;overflow:hidden;
     background:linear-gradient(#0a2236,#0c2b42 55%);border:1px solid var(--line)}
@@ -248,6 +267,7 @@
   </div>
 
   <div class="msg" id="msg" role="status" aria-live="polite"></div>
+  <a class="weather-alert" id="weatherAlert" href="#weatherWarningDetails" role="status" aria-live="polite" hidden></a>
 
   <div class="card" id="damCard">
     <div class="chead"><span class="nm">팔당댐 방류</span><span class="t" id="damT">—</span></div>
@@ -266,6 +286,17 @@
     </div>
     <details class="hist"><summary>과거 4시간 기록</summary><div class="drows scroll" id="damFullRows"></div></details>
     <div class="dnote" id="damNote">4시간 전 방류량이 지금 여의도 부근에 도달하는 중입니다.</div>
+  </div>
+
+  <div class="card" id="weatherCard">
+    <div class="chead"><span class="nm">기상예보</span><span class="t">여의도</span></div>
+    <div class="weather-current"><span class="wind" id="weatherNow">바람 불러오는 중…</span><span class="weather-time" id="weatherObsTime"></span></div>
+    <div class="weather-status" id="weatherWarning" role="status">서울서남권 특보 확인 중…</div>
+    <div id="weatherForecast">예보 불러오는 중…</div>
+    <details class="weather-detail" id="weatherMore"><summary>이후 예보</summary><div id="weatherForecastMore"></div></details>
+    <div class="weather-note" id="weatherForecastTime"></div>
+    <div class="weather-note">4시간 중 가장 강한 시간별 바람 기준 · 순간최대풍속 아님</div>
+    <details class="weather-detail" id="weatherWarningDetails"><summary>기상특보 상세</summary><div id="weatherWarningText">특보 확인 중…</div><a href="https://www.weather.go.kr/w/special-report/overall.do" target="_blank" rel="noopener noreferrer">기상청 특보 원문</a></details>
   </div>
 
   <div id="cards"><!-- 교량 카드가 여기 삽입됨. 순서: 잠수교 → (여의도 물때) → 행주대교 → (인천 물때) -->
@@ -370,6 +401,9 @@
 
       <div class="q">‘한강 수위’ 카드는 뭔가요?</div>
       <div class="a">행주대교와 한강대교의 실시간 수위를 좌우로 나란히 보여 줍니다(최근 30분 3개, ‘과거 4시간 기록’ 펼치기 가능). 한강 <b>역류</b>(밀물이 상류로 거슬러 오르는 현상) 감시에 참고합니다. <b>한강대교</b>는 마포대교 지점에 수위 관측소가 없어, 가장 가까운(<span class="num">≈3 km</span> 상류, 수위 사실상 동일) 한강대교 값을 대신 씁니다.</div>
+
+      <div class="q">‘기상예보’ 카드는 어떻게 보나요?</div>
+      <div class="a">현재 바람은 <b>여의도 대표 격자의 기상청 관측값</b>이며 선박에서 직접 측정한 값은 아닙니다. 풍향은 바람이 <b>불어오는 방향</b>, 풍속은 <b>m/s</b>입니다. 예보는 00·04·08·12·16·20시 기준으로 나누고 각 4시간 구간에서 <b>가장 강한 시간별 예보 풍속과 그때의 풍향</b>을 보여 줍니다. 순간최대풍속을 뜻하지 않으며 일부 시각만 있으면 ‘일부’로 표시합니다. 기본 두 구간 아래 ‘이후 예보’를 펼치면 나머지를 볼 수 있습니다.<br>특보는 여의도가 속한 <b>서울서남권</b> 기준으로, 발표된 특보·예비특보가 있으면 상단에도 표시합니다. 조회 실패는 ‘특보 확인 불가’로 구분합니다. 현재 바람은 약 10분, 특보는 약 5분마다 확인하고 예보는 새 발표자료에 맞춰 갱신합니다.</div>
 
       <div class="q">역류 카드의 방향 판정은 어떻게 보나요?</div>
       <div class="a">한강 수위 카드 맨 위 배지로, <b>여의도 추정 물때와 두 다리 수위 변화가 어느 방향의 가능성을 보이는지</b> 알려 줍니다.<br>
@@ -624,6 +658,7 @@ function fetchBridge(b){
    .catch(function(e){ showMsg(b.name+' 자동 호출 실패: '+e.message+'. 잠시 뒤 다시 시도하거나 수동 입력을 쓰세요.', true); return false; });
 }
 function fetchAll(forceOptional){
+  fetchWeather(!!forceOptional);
   if(!G.apiKey){ showMsg('자동 모드는 인증키가 필요합니다. 설정에서 넣어 주세요. 그 전까지는 수동 입력으로 쓸 수 있습니다.'); return Promise.resolve(false); }
   hideMsg();
   var core=[];
@@ -1105,6 +1140,187 @@ function renderTideCur(pct,partial){
   $('tideCur').style.display='flex';
 }
 
+/* ----- 여의도 기상 (현재 관측 + 4시간 구간 예보 + 서울서남권 특보) ----- */
+var WEATHER={nx:59,ny:126,key:CONFIG.TIDE_KEY,timeoutMs:6000,
+  forecastUrl:'https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/',
+  warningUrl:'https://apis.data.go.kr/1360000/WthrWrnInfoService/getPwnStatus'};
+var weatherState={obs:{},forecast:{},warning:{}}, weatherTimer=null;
+function weatherEscape(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function weatherStamp(ms){
+  var d=new Date(ms+9*3600000),p=function(n){return(n<10?'0':'')+n;};
+  return ''+d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+p(d.getUTCHours())+p(d.getUTCMinutes());
+}
+function weatherBase(kind,ms){
+  var d=new Date(ms+9*3600000-(kind==='obs'?20:15)*60000),h=d.getUTCHours(),hours=[2,5,8,11,14,17,20,23],i;
+  if(kind!=='obs'){
+    for(i=hours.length-1;i>=0;i--)if(hours[i]<=h)break;
+    if(i<0){d.setUTCDate(d.getUTCDate()-1);h=23;}else h=hours[i];
+  }
+  d.setUTCHours(h,0,0,0);
+  return weatherStamp(d.getTime()-9*3600000);
+}
+function weatherItems(text){
+  var j,root,items,xml,nodes,code,i,k,names,out=[];
+  if(/^\s*\{/.test(text)){
+    j=JSON.parse(text);root=j.response;
+    if(!root||!root.header||String(root.header.resultCode)!=='00')throw new Error('기상청 응답 오류');
+    items=root.body&&root.body.items&&root.body.items.item;
+    if(!items)return [];
+    return Array.isArray(items)?items:[items];
+  }
+  xml=new DOMParser().parseFromString(text,'application/xml');
+  code=xml.getElementsByTagName('resultCode')[0];
+  if(!code||code.textContent!=='00')throw new Error('기상청 응답 오류');
+  nodes=xml.getElementsByTagName('item');
+  for(i=0;i<nodes.length;i++){
+    names=nodes[i].children;j={};
+    for(k=0;k<names.length;k++)j[names[k].nodeName]=names[k].textContent;
+    out.push(j);
+  }
+  return out;
+}
+function weatherNumber(v){
+  if(v==null||String(v).trim()==='')return null;
+  var n=Number(v);return isFinite(n)&&n>=0?n:null;
+}
+function weatherWind(deg,speed){
+  if(speed===0)return '무풍';
+  if(deg==null||deg>360)return '풍향 없음';
+  return ['북','북북동','북동','동북동','동','동남동','남동','남남동','남','남남서','남서','서남서','서','서북서','북서','북북서'][Math.round(deg/22.5)%16]+'풍';
+}
+function weatherObservation(items){
+  var vals={},stamp='';
+  items.forEach(function(e){vals[e.category]=weatherNumber(e.obsrValue);stamp=String(e.baseDate)+String(e.baseTime);});
+  if(vals.WSD==null||vals.WSD>150||!/^\d{12}$/.test(stamp))throw new Error('관측값 없음');
+  return {stamp:stamp,speed:vals.WSD,dir:vals.VEC};
+}
+function weatherSeries(items){
+  var by={},out=[];
+  items.forEach(function(e){
+    if(e.category!=='VEC'&&e.category!=='WSD')return;
+    var stamp=String(e.fcstDate)+String(e.fcstTime);
+    if(!/^\d{12}$/.test(stamp))return;
+    if(!by[stamp])by[stamp]={stamp:stamp};
+    by[stamp][e.category]=weatherNumber(e.fcstValue);
+  });
+  Object.keys(by).sort().forEach(function(s){var r=by[s];
+    if(r.WSD!=null&&r.WSD<=150)out.push({stamp:s,speed:r.WSD,dir:r.VEC});
+  });
+  if(!out.length)throw new Error('예보값 없음');return out;
+}
+function weatherGroups(series,ms){
+  var hour=3600000,now=ms+9*hour,first=Math.floor(now/hour)*hour,limit=first+24*hour,by={},out=[];
+  series.forEach(function(e){
+    var t=ymdhmToMs(e.stamp);if(t<first||t>=limit)return;
+    var start=Math.floor(t/(4*hour))*4*hour,key=String(start);
+    if(!by[key])by[key]={start:start,end:start+4*hour,rows:[],peak:e};
+    var g=by[key];g.rows.push(e);if(e.speed>g.peak.speed)g.peak=e;
+  });
+  for(var start=Math.floor(first/(4*hour))*4*hour;start<limit;start+=4*hour){
+    var g=by[String(start)]||{start:start,end:start+4*hour,rows:[],peak:null};
+    if(!g.peak&&start<now)continue;
+    var expected=(Math.min(g.end,limit)-Math.max(g.start,first))/hour;
+    g.partial=g.rows.length<expected;g.remaining=g.start<now;out.push(g);
+  }return out;
+}
+function weatherWarningLines(text,preliminary){
+  var raw=String(text||'').trim();
+  if(!raw)throw new Error('특보 내용 없음');
+  if(/^(?:o\s*)?없\s*음[.\s]*$/.test(raw))return [];
+  var parts=raw.replace(/\r/g,'').split(/(?:^|\n)\s*[o○]\s*/),out=[],parsed=0;
+  parts.forEach(function(line){
+    line=line.trim();if(!line)return;
+    var sep=line.lastIndexOf(':');if(sep<0)sep=line.lastIndexOf('：');
+    if(sep<0)throw new Error('특보 구역 확인 필요');
+    var title=line.slice(0,sep).trim(),areas=line.slice(sep+1).replace(/\s/g,'');
+    if(!/(강풍|호우|한파|건조|폭풍해일|풍랑|태풍|대설|황사|폭염|안개|지진해일)/.test(title))throw new Error('특보 종류 확인 필요');
+    parsed++;
+    if(/서울(?:특별시)?\([^)]*제외/.test(areas))throw new Error('특보 구역 확인 필요');
+    if(/서울서남권|영등포/.test(areas)||/서울(?:특별시)?\((?:전역|전체|전지역)\)/.test(areas)||/(?:^|[,，·])서울(?:특별시)?(?:전역|전체)?(?:[,，·]|$)/.test(areas)){
+      out.push(title);
+    }
+  });
+  if(!parsed)throw new Error('특보 형식 확인 필요');return out;
+}
+function weatherWarnings(items){
+  if(!items.length)throw new Error('특보현황 없음');
+  items=items.slice().sort(function(a,b){return Number(b.tmFc)-Number(a.tmFc);});
+  var e=items[0],active=weatherWarningLines(e.t6,false),pre=weatherWarningLines(e.t7,true);
+  return {stamp:String(e.tmFc),active:active,pre:pre,raw:String(e.t6),rawPre:String(e.t7)};
+}
+function weatherRequest(kind,base){
+  var url=kind==='warning'?WEATHER.warningUrl:WEATHER.forecastUrl+(kind==='obs'?'getUltraSrtNcst':'getVilageFcst');
+  url+='?serviceKey='+encodeURIComponent(WEATHER.key)+'&dataType=JSON&pageNo=1&numOfRows=1500';
+  if(kind!=='warning')url+='&base_date='+base.slice(0,8)+'&base_time='+base.slice(8,12)+'&nx='+WEATHER.nx+'&ny='+WEATHER.ny;
+  return fetchTimed(url,{cache:'no-store'},WEATHER.timeoutMs,function(r){if(!r.ok)throw new Error('기상청 연결 오류');return r.text();})
+    .then(weatherItems);
+}
+function weatherSave(){
+  var cache={};['obs','forecast','warning'].forEach(function(k){var s=weatherState[k];if(s.data&&!s.error)cache[k]={at:s.at,base:s.base,data:s.data};});
+  store.set('hb_weather_v1',JSON.stringify(cache));
+}
+function restoreWeather(){
+  try{var c=JSON.parse(store.get('hb_weather_v1',''));if(!c)return;
+    ['obs','forecast','warning'].forEach(function(k){if(c[k]&&c[k].data&&Date.now()-c[k].at<5*60000)weatherState[k]=c[k];});
+  }catch(e){}
+}
+function fetchWeatherPart(kind,force){
+  var s=weatherState[kind],now=Date.now(),base=kind==='warning'?'':weatherBase(kind,now),ttl=kind==='warning'?5*60000:kind==='obs'?10*60000:30*60000;
+  if(s.pending)return s.pending;
+  if(!force&&s.retryAt>now)return Promise.resolve(false);
+  if(!force&&s.data&&s.base===base&&now-s.at<ttl)return Promise.resolve(true);
+  s.pending=weatherRequest(kind,base).catch(function(e){
+    if(kind==='warning')throw e;
+    var prev=weatherStamp(ymdhmToMs(base)-(kind==='obs'?1:3)*3600000-9*3600000);
+    return weatherRequest(kind,prev);
+  }).then(function(items){
+    var data=kind==='obs'?weatherObservation(items):kind==='forecast'?weatherSeries(items):weatherWarnings(items);
+    if(kind==='forecast'&&items[0])base=String(items[0].baseDate)+String(items[0].baseTime);
+    s.data=data;s.at=Date.now();s.base=base;s.error=false;s.retryAt=0;weatherSave();return true;
+  }).catch(function(){s.error=true;s.retryAt=Date.now()+60000;return false;}).then(function(ok){s.pending=null;renderWeather();return ok;});
+  return s.pending;
+}
+function fetchWeather(force){
+  if(!WEATHER.key||document.hidden)return Promise.resolve(false);
+  return Promise.all(['obs','forecast','warning'].map(function(k){return fetchWeatherPart(k,!!force);}));
+}
+function weatherTable(groups){
+  if(!groups.length)return '<div class="weather-note">앞으로의 예보가 없습니다</div>';
+  var today=weatherStamp(Date.now()).slice(0,8),h='<table class="weather-table"><thead><tr><th>시간</th><th>풍향</th><th>최대 예보풍속</th></tr></thead><tbody>';
+  groups.forEach(function(g){
+    var start=weatherStamp(g.start-9*3600000),end=weatherStamp(g.end-9*3600000),date=start.slice(0,8),label=date===today?'':start.slice(4,6)+'/'+start.slice(6,8);
+    h+='<tr><td>'+(label?'<span class="date">'+label+'</span>':'')+start.slice(8,10)+'–'+(end.slice(8,10)==='00'?'24':end.slice(8,10))+'시'+(g.partial&&g.peak?' <small>일부</small>':'')+(g.remaining?'<div class="weather-time">남은 시간 예보</div>':'')+'</td><td>'+(g.peak?weatherWind(g.peak.dir,g.peak.speed):'—')+'</td><td>'+(g.peak?'<b>'+fmt(g.peak.speed,1)+'</b> m/s':'자료 없음')+'</td></tr>';
+  });return h+'</tbody></table>';
+}
+function renderWeather(){
+  var obs=weatherState.obs,fc=weatherState.forecast,warn=weatherState.warning,alert=$('weatherAlert'),status=$('weatherWarning'),details=$('weatherWarningText'),now=Date.now();
+  if(obs.data&&!obs.error&&ymdhmAgeMin(obs.data.stamp)!=null&&ymdhmAgeMin(obs.data.stamp)<120){
+    $('weatherNow').innerHTML=weatherWind(obs.data.dir,obs.data.speed)+' <b>'+fmt(obs.data.speed,1)+'</b> <small>m/s</small>';
+    $('weatherObsTime').textContent=ymdhmToStr(obs.data.stamp)+' 관측';
+  }else{
+    $('weatherNow').textContent=obs.error?'바람 조회 실패':obs.data?'오래된 바람 자료':'바람 불러오는 중…';$('weatherObsTime').textContent='';
+  }
+  var groups=fc.data&&!fc.error?weatherGroups(fc.data,now):[];
+  $('weatherForecast').innerHTML=fc.error?'<div class="weather-note">기상예보를 불러오지 못했습니다</div>':fc.data?weatherTable(groups.slice(0,2)):'<div class="weather-note">예보 불러오는 중…</div>';
+  $('weatherForecastMore').innerHTML=weatherTable(groups.slice(2));$('weatherMore').hidden=groups.length<=2;
+  $('weatherForecastTime').textContent=fc.data&&!fc.error?fc.base.slice(4,6)+'/'+fc.base.slice(6,8)+' '+ymdhmToStr(fc.base)+' 예보 · 출처 기상청':'';
+  var usable=warn.data&&!warn.error&&now-warn.at<5*60000,labels=usable?warn.data.active.concat(warn.data.pre.map(function(s){return '예비 · '+s;})):[];
+  status.className='weather-status'+(!usable&&warn.error?' error':labels.length?' active':'');
+  if(usable){
+    status.textContent='서울서남권 '+(labels.length?labels.join(' · '):'특보 없음')+' · '+ymdhmToStr(weatherStamp(warn.at))+' 확인';
+    details.innerHTML='<div>전국 특보 원문 · '+weatherEscape(warn.data.stamp.slice(4,6)+'/'+warn.data.stamp.slice(6,8)+' '+ymdhmToStr(warn.data.stamp)+' 발표')+'</div><pre>'+weatherEscape(warn.data.raw)+'</pre><div>예비특보</div><pre>'+weatherEscape(warn.data.rawPre)+'</pre>';
+  }else{
+    status.textContent=warn.error?'서울서남권 특보 확인 불가':'서울서남권 특보 확인 중…';
+    details.textContent=warn.error?'기상특보를 불러오지 못했습니다. 기상청 원문을 확인해 주세요.':'최신 기상특보 확인 중…';
+  }
+  alert.hidden=usable?!labels.length:!warn.error;
+  alert.textContent=usable?'⚠ 서울서남권 · '+labels.join(' · '):'⚠ 기상특보 확인 불가';
+}
+function setupWeatherTimer(){
+  if(weatherTimer){clearInterval(weatherTimer);weatherTimer=null;}
+  if(!document.hidden)weatherTimer=setInterval(function(){renderWeather();fetchWeather();},60000);
+}
+
 /* ----- 모드 ----- */
 function applyModeUI(){
   $('mAuto').className=G.mode==='auto'?'on':'';
@@ -1168,6 +1384,7 @@ function setupTimer(){ if(timer){clearInterval(timer);timer=null;}
 
 /* ----- 이벤트 ----- */
 $('mAuto').onclick=function(){setMode('auto');};
+$('weatherAlert').onclick=function(){$('weatherWarningDetails').open=true;};
 $('mManual').onclick=function(){setMode('manual');};
 $('refresh').onclick=function(){
   var btn=$('refresh'); if(btn.disabled)return;
@@ -1176,7 +1393,7 @@ $('refresh').onclick=function(){
   if(G.mode==='auto') work=fetchAll(true);
   else { bridges.forEach(function(b){var card=document.querySelector('.card[data-id="'+b.id+'"]');
     var v=parseFloat(card.querySelector('[data-r=wl]').value); if(!isNaN(v))renderBridge(b,v,nowStr());});
-    fetchTide(true); fetchTideCur(); work=Promise.resolve(true); }
+    fetchTide(true); fetchTideCur(); fetchWeather(true); work=Promise.resolve(true); }
   Promise.resolve(work).then(function(result){
     var ok=result!==false&&(!Array.isArray(result)||result.every(function(v){return v!==false;}));
     btn.textContent=ok?'✓ 새로고침됨':'⚠ 일부 호출 실패'; btn.className='btn primary done';
@@ -1189,7 +1406,8 @@ $('refresh').onclick=function(){
 $('saveSet').onclick=saveSettings;
 document.addEventListener('visibilitychange',function(){
   setupTimer();
-  if(!document.hidden){ if(G.mode==='auto') fetchAll(); else { fetchTide(); fetchTideCur(); } }
+  setupWeatherTimer();
+  if(!document.hidden){ if(G.mode==='auto') fetchAll(); else { fetchTide(); fetchTideCur(); fetchWeather(); } }
 });
 
 /* ----- 다리 그림 온/오프 (공간 절약용, 기기에 기억) ----- */
@@ -1261,7 +1479,10 @@ applyModeUI();
 applyAdmin();
 applyScene();
 checkKeyExpiry();
-if(!document.hidden){ if(G.mode==='auto')fetchAll(); else { fetchTide(); fetchTideCur(); } }  // 숨긴 페이지에서는 호출하지 않고 다시 보일 때 갱신
+restoreWeather();
+renderWeather();
+setupWeatherTimer();
+if(!document.hidden){ if(G.mode==='auto')fetchAll(); else { fetchTide(); fetchTideCur(); fetchWeather(); } }  // 숨긴 페이지에서는 호출하지 않고 다시 보일 때 갱신
 setupTimer();
 // 이스터에그: 1분 이상 머물면 하단 크레딧이 전광판처럼 흐르기 시작(오른쪽→왼쪽)
 setTimeout(function(){ var el=$('credits'); if(el) el.className='marquee on'; }, 60000);
