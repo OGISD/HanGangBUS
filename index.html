@@ -323,7 +323,7 @@
     <h2 id="weatherWindDialogTitle">풍향 자세히</h2>
     <div class="compass-large" id="weatherWindDialogPlot"></div>
     <div class="wind-value" id="weatherWindDialogValue"></div>
-    <p id="weatherWindDialogNote">북쪽(N)은 항상 위쪽입니다.<br>밝은 바늘은 바람이 <b>불어오는 방향</b>을 가리킵니다.</p>
+    <p id="weatherWindDialogNote">북쪽(N)은 항상 위쪽입니다.<br>화살표는 바람이 <b>향하는 방향</b>입니다.<br>이름·풍향 각도는 <b>불어오는 방위</b>입니다.</p>
     <button type="button" id="weatherWindDialogClose">닫기</button>
   </dialog>
 
@@ -434,7 +434,7 @@
       <div class="a">현재 바람은 <b>여의도 대표 격자의 기상청 관측값</b>이며 선박에서 직접 측정한 값은 아닙니다. 풍향은 바람이 <b>불어오는 방향</b>, 풍속은 <b>m/s</b>입니다. 예보는 00·04·08·12·16·20시 기준으로 나누고 각 4시간 구간에서 <b>가장 강한 시간별 예보 풍속과 그때의 풍향</b>을 보여 줍니다. 순간최대풍속을 뜻하지 않으며 일부 시각만 있으면 ‘일부’로 표시합니다. 기본 두 구간 아래 ‘이후 예보’를 펼치면 나머지를 볼 수 있습니다.<br>특보는 여의도가 속한 <b>서울서남권</b> 기준으로, 발표된 특보·예비특보가 있으면 상단에도 표시합니다. 조회 실패는 ‘특보 확인 불가’로 구분합니다. 현재 바람은 약 10분, 특보는 약 5분마다 확인하고 예보는 새 발표자료에 맞춰 갱신합니다.</div>
 
       <div class="q">풍향 옆 작은 나침반은 어떻게 보나요?</div>
-      <div class="a">북쪽(N)은 항상 위쪽이며 <b>밝은 바늘이 바람이 불어오는 방향</b>을 가리킵니다. 예를 들어 <b>남남서풍은 남남서쪽(202.5°)에서 불어오는 바람</b>입니다. 나침반을 누르면 16방위와 실제 각도를 크게 볼 수 있습니다. 풍향 이름은 가까운 16방위로 읽고, 바늘은 기상청이 제공한 실제 각도를 그대로 표시합니다. 무풍이거나 풍향이 없으면 바늘을 표시하지 않습니다.</div>
+      <div class="a">북쪽(N)은 항상 위쪽이며 <b>화살표는 바람이 향하는 방향</b>을 가리킵니다. <b>풍향 이름과 각도는 바람이 불어오는 방위</b>입니다. 예를 들어 <b>서풍(270°)은 서쪽에서 동쪽으로 불므로 화살표가 동쪽을 가리킵니다.</b> 남남서풍(202.5°)은 북북동쪽으로 향합니다. 나침반을 누르면 16방위와 실제 풍향 각도를 크게 볼 수 있습니다. 이름은 가까운 16방위로 읽으며, 화살표만 기상청 풍향 각도의 반대쪽(+180°)을 표시합니다. 무풍이거나 풍향이 없으면 화살표를 표시하지 않습니다.</div>
 
       <div class="q">역류 카드의 방향 판정은 어떻게 보나요?</div>
       <div class="a">한강 수위 카드 맨 위 배지로, <b>여의도 추정 물때와 두 다리 수위 변화가 어느 방향의 가능성을 보이는지</b> 알려 줍니다.<br>
@@ -1224,6 +1224,7 @@ function weatherCompassAngle(deg,speed){
   return n==null||n>360||s==null||s===0?null:n%360;
 }
 function weatherCompassSvg(angle,large){
+  var toward=angle==null?null:(angle+180)%360;
   var s='<svg xmlns="http://www.w3.org/2000/svg" viewBox="'+(large?'-16 -16 132 132':'0 0 100 100')+'" aria-hidden="true" focusable="false">'+
     '<circle cx="50" cy="50" r="34" fill="#0a1b2b" stroke="#52728c" stroke-width="1.5"/>'+
     '<path d="M50 25V75M25 50H75" stroke="#2a475c" stroke-width="1"/>',i,a,r,x,y;
@@ -1236,13 +1237,13 @@ function weatherCompassSvg(angle,large){
     }
   }
   if(!large)s+='<text x="50" y="12" text-anchor="middle" fill="#f4c975" font-family="sans-serif" font-size="15" font-weight="700">N</text>';
-  if(angle!=null)s+='<g class="wind-needle" transform="rotate('+angle+' 50 50)"><path d="M50 51V72" stroke="#6c8ca3" stroke-width="3" stroke-linecap="round"/><path d="M50 20L58 57L50 53L42 57Z" fill="#79ddff" stroke="#c2f2ff" stroke-width=".7"/></g>';
+  if(toward!=null)s+='<g class="wind-needle" transform="rotate('+toward+' 50 50)"><path d="M50 74V34" stroke="#79ddff" stroke-width="4" stroke-linecap="round"/><path d="M50 20L60 39L50 35L40 39Z" fill="#79ddff" stroke="#c2f2ff" stroke-width=".7"/></g>';
   return s+'<circle cx="50" cy="50" r="3" fill="#e5f8ff"/></svg>';
 }
 function weatherWindMarkup(deg,speed,context){
   var angle=weatherCompassAngle(deg,speed),label=weatherWind(deg,speed),icon=weatherCompassSvg(angle,false);
   var control=angle==null?'<span class="wind-compass empty" aria-hidden="true">'+icon+'</span>':
-    '<button type="button" class="wind-compass" data-wind-deg="'+angle+'" data-wind-speed="'+speed+'" data-wind-context="'+weatherEscape(context)+'" aria-haspopup="dialog" aria-controls="weatherWindDialog" aria-label="'+weatherEscape(context+' '+label+' '+angle+'도, 나침반 크게 보기')+'" title="바람이 불어오는 방향 · 눌러서 확대">'+icon+'</button>';
+    '<button type="button" class="wind-compass" data-wind-deg="'+angle+'" data-wind-speed="'+speed+'" data-wind-context="'+weatherEscape(context)+'" aria-haspopup="dialog" aria-controls="weatherWindDialog" aria-label="'+weatherEscape(context+' '+label+', 불어오는 방위 '+angle+'도, 화살표는 바람이 향하는 방향, 나침반 크게 보기')+'" title="화살표는 바람이 향하는 방향 · 눌러서 확대">'+icon+'</button>';
   return '<span class="wind-direction">'+control+'<span>'+label+'</span></span>';
 }
 var weatherCompassTrigger=null;
@@ -1252,7 +1253,7 @@ function openWeatherCompass(button){
   var dialog=$('weatherWindDialog'),label=weatherWind(angle,Number(button.getAttribute('data-wind-speed')));
   $('weatherWindDialogTitle').textContent=button.getAttribute('data-wind-context')+' · 풍향';
   $('weatherWindDialogPlot').innerHTML=weatherCompassSvg(angle,true);
-  $('weatherWindDialogValue').textContent=label+' · '+fmt(angle,1).replace(/\.0$/,'')+'°';
+  $('weatherWindDialogValue').textContent=label+' · 풍향 '+fmt(angle,1).replace(/\.0$/,'')+'°';
   weatherCompassTrigger=button;
   if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');
   document.body.classList.add('wind-modal-open');$('weatherWindDialogClose').focus();

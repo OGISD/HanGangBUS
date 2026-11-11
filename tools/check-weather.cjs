@@ -40,7 +40,12 @@ assert.equal(ctx.weatherCompassAngle(360, 3), 0);
 assert.equal(ctx.weatherCompassAngle(null, 3), null);
 assert.equal(ctx.weatherCompassAngle(0, 0), null);
 assert.equal(ctx.weatherCompassAngle(361, 3), null);
-assert(ctx.weatherCompassSvg(202.5, true).includes('rotate(202.5 50 50)'), '바늘 각도를 180도 뒤집지 않음');
+[[0,180],[90,270],[180,0],[270,90],[360,180],[202.5,22.5],[129,309]].forEach(([from,toward]) => {
+  [false,true].forEach(large => assert(ctx.weatherCompassSvg(from,large).includes('rotate('+toward+' 50 50)'), '작은/확대 화살표는 바람의 이동 방향: '+from));
+});
+assert.equal(ctx.weatherWind(270,3), '서풍', '화살표를 바꿔도 풍향 이름은 불어오는 방위 유지');
+assert(ctx.weatherWindMarkup(90,3,'현재 바람').includes('화살표는 바람이 향하는 방향'));
+assert(html.includes('이름·풍향 각도는 <b>불어오는 방위</b>'), '확대창에서 풍향 각도와 화살표의 의미를 구분함');
 assert(ctx.weatherCompassSvg(202.5, true).includes('>SSW</text>'));
 assert(ctx.weatherWindMarkup(129, 2.2, '현재 바람').includes('data-wind-deg="129"'), '16방위 이름과 별개로 원래 각도를 유지함');
 assert(!ctx.weatherWindMarkup(0, 0, '현재 바람').includes('wind-needle'));
