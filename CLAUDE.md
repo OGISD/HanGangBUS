@@ -263,7 +263,8 @@ var CONFIG = {
 
 ## 여의도 기상예보·특보(2026-11-11)
 
-- 팔당댐 아래 `#weatherCard`, 상단의 `#weatherAlert`. 일반적인 이름 `기상예보`를 사용하며 새 탭 없음.
+- 새로고침·`#weatherAlert` 아래 첫 번째 카드가 `#weatherCard`이며, 그다음 `#damCard`. 일반적인 이름 `기상예보`를 사용하며 새 탭 없음.
+- 지역 확대는 구성 협의 전으로 현재 여의도 격자·서울서남권 특보 필터를 유지. 카드 이동은 HTML 순서만 바꾸며 API·판정에 영향 없음.
 - `WEATHER`: 여의도 격자 `(59,126)`, 현재 관측 `getUltraSrtNcst`, 단기예보 `getVilageFcst`, 특보현황 `getPwnStatus`.
 - `weatherBase()`는 KST로 관측 발표와 하루 8회 단기예보 기준시각을 선택. 발표 직후 지연을 고려하고 실패하면 한 발표 전 자료 재시도.
 - `weatherItems()`는 JSON/XML과 결과코드를 확인. `weatherNumber()`는 빈 값·결측을 0으로 오인하지 않음.

@@ -4,6 +4,8 @@ const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+assert(html.indexOf('id="weatherAlert"') < html.indexOf('id="weatherCard"') && html.indexOf('id="weatherCard"') < html.indexOf('id="damCard"'), '특보 알림 아래 기상예보가 첫 번째 카드임');
+assert.equal((html.match(/id="weatherCard"/g)||[]).length,1,'기상예보 카드를 중복 생성하지 않음');
 const block = html.slice(html.indexOf('var WEATHER='), html.indexOf('/* ----- 모드 ----- */'));
 assert(block.startsWith('var WEATHER='), '기상 구현을 찾지 못했습니다');
 const elements = {};

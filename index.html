@@ -289,6 +289,17 @@
   <div class="msg" id="msg" role="status" aria-live="polite"></div>
   <a class="weather-alert" id="weatherAlert" href="#weatherWarningDetails" role="status" aria-live="polite" hidden></a>
 
+  <div class="card" id="weatherCard">
+    <div class="chead weather-head"><span class="nm">기상예보</span><span class="weather-compass-hint">나침반 눌러 확대</span><span class="t">여의도<span class="weather-observed" id="weatherObsTime"></span></span></div>
+    <div class="weather-current"><span class="wind" id="weatherNow">바람 불러오는 중…</span></div>
+    <div class="weather-status" id="weatherWarning" role="status">서울서남권 특보 확인 중…</div>
+    <div id="weatherForecast">예보 불러오는 중…</div>
+    <details class="weather-detail" id="weatherMore"><summary>이후 예보</summary><div id="weatherForecastMore"></div></details>
+    <div class="weather-note" id="weatherForecastTime"></div>
+    <div class="weather-note">4시간 중 가장 강한 시간별 바람 기준 · 순간최대풍속 아님</div>
+    <details class="weather-detail" id="weatherWarningDetails"><summary>기상특보 상세</summary><div id="weatherWarningText">특보 확인 중…</div><a href="https://www.weather.go.kr/w/special-report/overall.do" target="_blank" rel="noopener noreferrer">기상청 특보 원문</a></details>
+  </div>
+
   <div class="card" id="damCard">
     <div class="chead"><span class="nm">팔당댐 방류</span><span class="t" id="damT">—</span></div>
     <div class="dam">
@@ -306,17 +317,6 @@
     </div>
     <details class="hist"><summary>과거 4시간 기록</summary><div class="drows scroll" id="damFullRows"></div></details>
     <div class="dnote" id="damNote">4시간 전 방류량이 지금 여의도 부근에 도달하는 중입니다.</div>
-  </div>
-
-  <div class="card" id="weatherCard">
-    <div class="chead weather-head"><span class="nm">기상예보</span><span class="weather-compass-hint">나침반 눌러 확대</span><span class="t">여의도<span class="weather-observed" id="weatherObsTime"></span></span></div>
-    <div class="weather-current"><span class="wind" id="weatherNow">바람 불러오는 중…</span></div>
-    <div class="weather-status" id="weatherWarning" role="status">서울서남권 특보 확인 중…</div>
-    <div id="weatherForecast">예보 불러오는 중…</div>
-    <details class="weather-detail" id="weatherMore"><summary>이후 예보</summary><div id="weatherForecastMore"></div></details>
-    <div class="weather-note" id="weatherForecastTime"></div>
-    <div class="weather-note">4시간 중 가장 강한 시간별 바람 기준 · 순간최대풍속 아님</div>
-    <details class="weather-detail" id="weatherWarningDetails"><summary>기상특보 상세</summary><div id="weatherWarningText">특보 확인 중…</div><a href="https://www.weather.go.kr/w/special-report/overall.do" target="_blank" rel="noopener noreferrer">기상청 특보 원문</a></details>
   </div>
 
   <dialog class="wind-dialog" id="weatherWindDialog" role="dialog" aria-modal="true" aria-labelledby="weatherWindDialogTitle" aria-describedby="weatherWindDialogNote">
