@@ -18,7 +18,7 @@
 - 언어/프레임워크: 순수 HTML/CSS/JavaScript(ES5 스타일) — **프레임워크·빌드 도구 없음**
 - 데이터베이스: 없음. 설정은 브라우저 localStorage(키 `hb_*`), 막히면 메모리 폴백
 - 배포 환경: GitHub Pages (`main` 브랜치, push 시 자동 재배포)
-- 데이터 출처: HRFCO 수위·댐 API, data.go.kr 물때 API, KHOA 조류 API, 인천 연간 조석표 JSON
+- 데이터 출처: HRFCO 수위·댐 API, data.go.kr 물때·기상청 API, KHOA 조류 API, 인천 연간 조석표 JSON
 
 ---
 
