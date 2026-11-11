@@ -109,7 +109,7 @@
   .weather-status{font-size:11px;line-height:1.5;padding:6px 0;border-top:1px solid var(--line);color:var(--muted)}
   .weather-status.active,.weather-status.error{color:var(--caution)}
   .weather-table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
-  .weather-table th{font-size:10px;color:var(--muted);font-weight:500;text-align:left;padding:5px 0}
+  .weather-table th{font-size:10px;color:var(--muted);font-weight:500;text-align:left;padding:5px 0;white-space:nowrap}
   .weather-table td{padding:7px 0;border-top:1px solid var(--line);white-space:nowrap}
   .weather-table th:last-child,.weather-table td:last-child{text-align:right}
   .weather-table .date{font-size:10px;color:var(--muted);margin-right:4px}
@@ -1362,7 +1362,7 @@ function fetchWeather(force){
 }
 function weatherTable(groups){
   if(!groups.length)return '<div class="weather-note">앞으로의 예보가 없습니다</div>';
-  var today=weatherStamp(Date.now()).slice(0,8),h='<table class="weather-table"><thead><tr><th>시간</th><th>풍향</th><th>최대 예보풍속</th></tr></thead><tbody>';
+  var today=weatherStamp(Date.now()).slice(0,8),h='<table class="weather-table"><thead><tr><th>시간</th><th>풍향 · 눌러 확대</th><th>최대 예보풍속</th></tr></thead><tbody>';
   groups.forEach(function(g){
     var start=weatherStamp(g.start-9*3600000),end=weatherStamp(g.end-9*3600000),date=start.slice(0,8),label=date===today?'':start.slice(4,6)+'/'+start.slice(6,8);
     var context=(label?label+' ':'')+start.slice(8,10)+'–'+(end.slice(8,10)==='00'?'24':end.slice(8,10))+'시 예보';

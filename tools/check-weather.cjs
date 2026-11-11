@@ -68,6 +68,7 @@ assert.equal(groups[0].remaining, true);
 assert.equal(groups[1].peak, null, '예보가 통째로 빠진 구간을 숨기지 않음');
 assert.equal(groups[2].partial, true);
 assert(ctx.weatherTable(groups).includes('자료 없음'));
+assert(ctx.weatherTable(groups).includes('<th>풍향 · 눌러 확대</th>'), '확대 안내는 기존 풍향 제목 안에 표시함');
 const midnight = ctx.weatherGroups([sample('202612312300', 3), sample('202701010000', 4)], at('2026-12-31T23:10:00'));
 assert.equal(midnight[0].peak.speed, 3);
 assert.equal(midnight[1].peak.speed, 4);
