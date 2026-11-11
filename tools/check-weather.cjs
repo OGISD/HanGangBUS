@@ -74,10 +74,30 @@ assert.equal(groups[0].partial, false);
 assert.equal(groups[0].remaining, true);
 assert.equal(groups[1].peak, null, '예보가 통째로 빠진 구간을 숨기지 않음');
 assert.equal(groups[2].partial, true);
-assert(ctx.weatherTable(groups).includes('자료 없음'));
-assert(ctx.weatherTable(groups).includes('<th>풍향</th>'), '예보 표 제목은 풍향만 표시함');
+const compareAt=at('2026-11-11T12:05:00');
+const compareSlots=ctx.weatherGroups([],compareAt);
+const compareRows=[sample('202611111200',2),sample('202611111300',7),sample('202611111400',4),sample('202611111500',1)];
+for(const id of ['magok','yeouido'])ctx.weatherRegionState(id).forecast={data:compareRows,base:'202611111100'};
+ctx.weatherRegionState('jamsil').forecast={data:[sample('202611111600',9)],base:'202611111400'};
+function rowFor(id,markup=elements.weatherForecast.innerHTML){return markup.match(new RegExp('<tr data-weather-region="'+id+'">([\\s\\S]*?)</tr>'))[1];}
+function currentFor(id){return rowFor(id).match(/<td>([\s\S]*?)<\/td>/)[1];}
+const matrix=ctx.weatherTable(compareSlots.slice(0,2),true,compareAt);
+assert.equal((matrix.match(/data-weather-region=/g)||[]).length,3,'한 표에 세 지역 행을 표시함');
+assert(rowFor('magok',matrix).includes('>7.0</b>'));
+const jamsilCells=Array.from(rowFor('jamsil',matrix).matchAll(/<td>([\s\S]*?)<\/td>/g),m=>m[1]);
+assert(jamsilCells[1].includes('자료 없음')&&!jamsilCells[1].includes('9.0'),'현재 구간이 빠져도 다음 구간을 앞 열에 당기지 않음');
+assert(jamsilCells[2].includes('9.0'));
+assert.equal(ctx.weatherComparisonSlots(compareAt)[0].start,compareSlots[0].start,'한 지역에 남은 구간 예보가 있으면 공통 첫 열로 유지함');
+for(const id of ['magok','yeouido'])ctx.weatherRegionState(id).forecast.data=[sample('202611111600',9)];
+assert.equal(ctx.weatherComparisonSlots(compareAt)[0].start,compareSlots[1].start,'세 지역 모두 현재 구간이 없으면 함께 다음 구간부터 표시함');
+ctx.weatherRegionState('magok').forecast.data=compareRows;
+ctx.weatherRegionState('yeouido').forecast.data=compareRows;
+assert(matrix.includes('남은 예보'));
+assert(!ctx.weatherTable(compareSlots.slice(2),false,compareAt).includes('wind-compass'),'이후 예보에는 나침반을 반복하지 않음');
+assert(!html.includes('id="weatherRegion"'),'지역 선택 메뉴 대신 세 정보를 동시에 표시함');
 assert(html.includes('<span class="weather-compass-hint">나침반 눌러 확대</span>'), '확대 안내는 카드 제목 옆 여백에 표시함');
-assert(!ctx.weatherTable(groups).includes('눌러 확대'), '예보 표에 확대 안내를 중복 표시하지 않음');
+assert(!matrix.includes('눌러 확대'), '예보 표에 확대 안내를 중복 표시하지 않음');
+assert(!matrix.includes(' m/s</'),'표 안에 단위를 반복하지 않음');
 const midnight = ctx.weatherGroups([sample('202612312300', 3), sample('202701010000', 4)], at('2026-12-31T23:10:00'));
 assert.equal(midnight[0].peak.speed, 3);
 assert.equal(midnight[1].peak.speed, 4);
@@ -125,7 +145,7 @@ async function main() {
 
   ctx.weatherState.warning.data=ctx.weatherWarnings([{tmFc:'202611110200',t6:'o 호우경보 : 서울(서울동남권)',t7:'o 없음'}]);
   ctx.renderWeather();
-  assert(elements.weatherWarning.textContent.includes('서울서남권 특보 없음'));
+  assert(elements.weatherWarning.textContent.includes('서울동남권')&&elements.weatherWarning.textContent.includes('호우경보'));
   assert(!elements.weatherAlert.hidden && elements.weatherAlert.textContent.includes('서울동남권'), '선택하지 않은 잠실 권역 특보도 상단에 표시함');
   const urls=[];
   function responseFor(url) {
@@ -136,22 +156,22 @@ async function main() {
   }
   ctx.weatherState={regions:{},warning:{}};
   request=url=>{urls.push(url);return responseFor(url);};
+  await ctx.fetchWeather();
   for(const id of ['magok','yeouido','jamsil']) {
-    await ctx.selectWeatherRegion(id);
     const r=ctx.weatherRegionInfo(id),s=ctx.weatherRegionState(id);
     assert.equal(s.obs.data.speed,r.nx/10);
-    assert(elements.weatherNow.innerHTML.includes(r.name+' 현재 바람'));
-    assert.equal(elements.weatherRegion.value,id);
+    assert(currentFor(id).includes(r.name+' 현재 바람'));
     assert(urls.some(u=>u.includes('getUltraSrtNcst')&&u.includes('&nx='+r.nx+'&ny='+r.ny)));
     assert(urls.some(u=>u.includes('getVilageFcst')&&u.includes('&nx='+r.nx+'&ny='+r.ny)));
   }
   assert.equal(urls.filter(u=>u.includes('getPwnStatus')).length,1,'특보 요청은 세 지역이 공유함');
   const count=urls.length;
-  await ctx.selectWeatherRegion('magok');
-  assert.equal(urls.length,count,'방금 조회한 지역으로 돌아올 때 재요청하지 않음');
+  assert.equal(urls.length,7,'세 지역 현재·예보 여섯 건과 공통 특보 한 건만 요청함');
+  assert.equal((elements.weatherForecast.innerHTML.match(/class="wind-compass"/g)||[]).length,3,'나침반은 각 지역 현재 바람에만 표시함');
+  await ctx.fetchWeather();
+  assert.equal(urls.length,count,'같은 발표 자료를 다시 요청하지 않음');
   ctx.weatherState={regions:{},warning:{}};
   ctx.restoreWeather();
-  assert.equal(ctx.weatherRegionId,'magok');
   assert.equal(ctx.weatherRegionState('magok').obs.data.speed,5.7);
   assert.equal(ctx.weatherRegionState('jamsil').obs.data.speed,6.2);
   assert(!values.hb_weather_v1,'지역 미분리 구형 캐시에 저장하지 않음');
@@ -159,19 +179,23 @@ async function main() {
   ctx.weatherState.regions={};
   const pending={};
   request=url=>url.includes('getUltraSrtNcst')?new Promise(resolve=>{pending[new URL(url).searchParams.get('nx')]=()=>resolve(responseFor(url));}):responseFor(url);
-  const magokWork=ctx.selectWeatherRegion('magok');
-  const jamsilWork=ctx.selectWeatherRegion('jamsil');
+  const magokWork=ctx.fetchWeatherPart('obs',false,'magok');
+  const jamsilWork=ctx.fetchWeatherPart('obs',false,'jamsil');
   await Promise.resolve();await Promise.resolve();
   pending['62']();await jamsilWork;
   pending['57']();await magokWork;
-  assert.equal(ctx.weatherRegionId,'jamsil');
-  assert(elements.weatherNow.innerHTML.includes('잠실 현재 바람') && elements.weatherNow.innerHTML.includes('6.2'), '이전 지역의 늦은 응답이 현재 지역 화면을 덮지 않음');
+  assert(currentFor('jamsil').includes('잠실 현재 바람')&&currentFor('jamsil').includes('6.2'));
+  assert(currentFor('magok').includes('마곡 현재 바람')&&currentFor('magok').includes('5.7'),'늦은 응답이 해당 지역 행만 갱신함');
   request=()=>{throw new Error('마곡 연결 실패');};
   assert.equal(await ctx.fetchWeatherPart('obs',true,'magok'),false);
   assert(ctx.weatherRegionState('magok').obs.error);
   assert(!ctx.weatherRegionState('jamsil').obs.error);
-  assert(elements.weatherNow.innerHTML.includes('잠실 현재 바람'),'다른 지역의 실패가 선택 지역에 영향을 주지 않음');
-  values.hb_weather_region_v1='unknown';ctx.restoreWeather();assert.equal(ctx.weatherRegionId,'yeouido');
+  assert(currentFor('magok').includes('조회 실패')&&!currentFor('magok').includes('마곡 현재 바람'));
+  assert(currentFor('jamsil').includes('잠실 현재 바람'),'한 지역의 실패가 다른 행에 영향을 주지 않음');
+  const oldObservation=ctx.weatherRegionState('jamsil').obs.data;
+  ctx.weatherRegionState('jamsil').obs.data={stamp:ctx.weatherStamp(Date.now()-121*60000),dir:90,speed:3};
+  ctx.renderWeather();assert(currentFor('jamsil').includes('오래된 자료')&&!currentFor('jamsil').includes('wind-compass'),'오래된 현재 자료는 바람처럼 표시하지 않음');
+  ctx.weatherRegionState('jamsil').obs.data=oldObservation;
   request = () => { throw new Error('숨긴 화면의 요청'); };
   ctx.document.hidden = true;
   assert.equal(await ctx.fetchWeather(true), false);

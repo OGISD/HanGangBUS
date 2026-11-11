@@ -88,17 +88,10 @@
   .weather-head{gap:6px}
   .weather-head .nm,.weather-head .t{white-space:nowrap}
   .weather-compass-hint{color:var(--muted);font-size:10px;font-weight:400;letter-spacing:-.02em;white-space:nowrap}
-  .weather-region{font:inherit;color:var(--text);background:var(--ink2);border:0;border-bottom:1px solid #52728c;border-radius:0;padding:0 1px;cursor:pointer;max-width:65px}
-  .weather-current{display:flex;align-items:center;gap:8px;margin-bottom:8px;min-height:40px}
-  .weather-current .wind{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:750;white-space:nowrap}
-  .weather-current .wind small{font-size:12px;font-weight:500}
-  .weather-observed:not(:empty)::before{content:" · "}
   .wind-direction{display:inline-flex;align-items:center;gap:5px;vertical-align:middle}
   .wind-compass{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:none;width:28px;height:28px;padding:0;border:0;border-radius:50%;background:none;color:inherit;cursor:pointer;font:inherit}
   button.wind-compass::after{content:"";position:absolute;inset:-6px}
   .wind-compass svg{display:block;width:100%;height:100%;overflow:visible}
-  .weather-current .wind-compass{width:40px;height:40px}
-  .weather-current button.wind-compass::after{inset:-2px}
   .wind-compass.empty{opacity:.5;cursor:default}
   .wind-dialog{position:fixed;inset:0;width:calc(100% - 32px);max-width:300px;margin:auto;padding:18px;border:1px solid #38566b;border-radius:18px;background:var(--ink2);color:var(--text);text-align:center;max-height:calc(100% - 32px);overflow-y:auto}
   .wind-dialog:not([open]){display:none}
@@ -112,11 +105,17 @@
   .weather-time,.weather-note{font-size:11px;color:var(--muted);line-height:1.5}
   .weather-status{font-size:11px;line-height:1.5;padding:6px 0;border-top:1px solid var(--line);color:var(--muted)}
   .weather-status.active,.weather-status.error{color:var(--caution)}
-  .weather-table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
-  .weather-table th{font-size:10px;color:var(--muted);font-weight:500;text-align:left;padding:5px 0;white-space:nowrap}
-  .weather-table td{padding:7px 0;border-top:1px solid var(--line);white-space:nowrap}
-  .weather-table th:last-child,.weather-table td:last-child{text-align:right}
-  .weather-table .date{font-size:10px;color:var(--muted);margin-right:4px}
+  .weather-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;text-align:center}
+  .weather-table th{font-size:11px;color:var(--muted);font-weight:500;padding:5px 0;white-space:nowrap}
+  .weather-table td,.weather-table tbody th{padding:5px 0;border-top:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+  .weather-table tbody th{color:var(--text);font-size:12px;font-weight:600;text-align:left}
+  .weather-table small{display:block;font-size:11px;font-weight:400;color:var(--muted);line-height:1.4}
+  .weather-table .wind-direction{gap:3px}
+  .weather-table .wind-compass{width:22px;height:22px}
+  .weather-table button.wind-compass::after{inset:-10px}
+  .weather-speed{display:block;font-size:14px;line-height:1.4;font-weight:700}
+  .weather-empty{display:block;color:var(--muted);white-space:normal;overflow-wrap:anywhere;line-height:1.4}
+  .weather-later thead th:first-child{text-align:left}
   .weather-detail{font-size:11px;color:var(--muted);line-height:1.55;margin-top:8px}
   .weather-detail summary{cursor:pointer;padding:7px 0}
   .weather-detail summary::after{content:"▼";font-size:11px}
@@ -291,10 +290,9 @@
   <a class="weather-alert" id="weatherAlert" href="#weatherWarningDetails" role="status" aria-live="polite" hidden></a>
 
   <div class="card" id="weatherCard">
-    <div class="chead weather-head"><span class="nm">기상예보</span><span class="weather-compass-hint">나침반 눌러 확대</span><span class="t"><select class="weather-region" id="weatherRegion" aria-label="기상예보 지역"><option value="magok">마곡</option><option value="yeouido" selected>여의도</option><option value="jamsil">잠실</option></select><span class="weather-observed" id="weatherObsTime"></span></span></div>
-    <div class="weather-current"><span class="wind" id="weatherNow">바람 불러오는 중…</span></div>
-    <div class="weather-status" id="weatherWarning" role="status">서울서남권 특보 확인 중…</div>
+    <div class="chead weather-head"><span class="nm">기상예보</span><span class="weather-compass-hint">나침반 눌러 확대</span><span class="t">풍속 m/s</span></div>
     <div id="weatherForecast">예보 불러오는 중…</div>
+    <div class="weather-status" id="weatherWarning" role="status">서남권·동남권 특보 확인 중…</div>
     <details class="weather-detail" id="weatherMore"><summary>이후 예보</summary><div id="weatherForecastMore"></div></details>
     <div class="weather-note" id="weatherForecastTime"></div>
     <div class="weather-note">4시간 중 가장 강한 시간별 바람 기준 · 순간최대풍속 아님</div>
@@ -432,7 +430,7 @@
       <div class="a">행주대교와 한강대교의 실시간 수위를 좌우로 나란히 보여 줍니다(최근 30분 3개, ‘과거 4시간 기록’ 펼치기 가능). 한강 <b>역류</b>(밀물이 상류로 거슬러 오르는 현상) 감시에 참고합니다. <b>한강대교</b>는 마포대교 지점에 수위 관측소가 없어, 가장 가까운(<span class="num">≈3 km</span> 상류, 수위 사실상 동일) 한강대교 값을 대신 씁니다.</div>
 
       <div class="q">‘기상예보’ 카드는 어떻게 보나요?</div>
-      <div class="a">카드 오른쪽 지역 메뉴에서 <b>마곡·여의도·잠실</b>을 선택합니다. 처음에는 여의도이며 마지막 선택을 기억합니다. 현재 바람은 <b>선택 지역 주변 대표 격자의 기상청 관측값</b>으로 선착장이나 선박에서 직접 측정한 값은 아닙니다. 풍향은 바람이 <b>불어오는 방향</b>, 풍속은 <b>m/s</b>입니다. 예보는 00·04·08·12·16·20시 기준으로 나누고 각 4시간 구간에서 <b>가장 강한 시간별 예보 풍속과 그때의 풍향</b>을 보여 줍니다. 순간최대풍속을 뜻하지 않으며 일부 시각만 있으면 ‘일부’로 표시합니다. 기본 두 구간 아래 ‘이후 예보’를 펼치면 나머지를 볼 수 있습니다.<br>카드의 특보는 마곡·여의도 <b>서울서남권</b>, 잠실 <b>서울동남권</b> 기준입니다. 상단 알림은 선택하지 않은 지역도 놓치지 않도록 <b>두 권역의 특보·예비특보</b>를 함께 표시합니다. 조회 실패는 ‘특보 확인 불가’로 구분합니다. 현재 바람은 약 10분, 특보는 약 5분마다 확인하고 예보는 새 발표자료에 맞춰 갱신합니다. 다른 지역은 선택할 때 조회하며 지역별 자료를 구분해 보관합니다.</div>
+      <div class="a">표의 세로는 <b>마곡·여의도·잠실</b>, 가로는 <b>현재 바람과 두 예보 구간</b>입니다. 지역명 아래는 현재 바람의 관측 시각이며 풍속 단위는 모두 <b>m/s</b>입니다. 현재 바람의 작은 나침반을 누르면 확대할 수 있습니다. 값은 <b>각 지역 주변 대표 격자의 기상청 관측·예보</b>로, 선착장이나 선박에서 직접 측정한 값은 아닙니다.<br>예보는 00·04·08·12·16·20시 기준 각 4시간 구간의 <b>가장 강한 시간별 예보 풍속과 그때의 풍향</b>이며 순간최대풍속이 아닙니다. 세 지역이 같은 시간 열을 공유합니다. 현재 구간 예보가 세 곳 모두 없으면 함께 다음 구간부터 표시하며, 특정 지역만 빠지면 ‘자료 없음’으로 표시합니다. 구간 일부 시각만 있으면 ‘일부’이며, 지난 시간이 포함된 구간은 ‘남은 예보’입니다. ‘이후 예보’를 펼치면 나머지를 비교할 수 있습니다.<br>특보는 마곡·여의도 <b>서울서남권</b>, 잠실 <b>서울동남권</b>을 카드와 상단 알림에서 함께 확인합니다. 조회 실패는 ‘확인 불가’로 구분합니다. 현재 바람은 약 10분, 특보는 약 5분마다 확인하고 예보는 새 발표자료에 맞춰 갱신합니다. 세 지역 자료·오류·재시도와 캐시는 각각 구분해 처리합니다.</div>
 
       <div class="q">풍향 옆 작은 나침반은 어떻게 보나요?</div>
       <div class="a">북쪽(N)은 항상 위쪽이며 <b>화살표는 바람이 향하는 방향</b>을 가리킵니다. <b>풍향 이름과 각도는 바람이 불어오는 방위</b>입니다. 예를 들어 <b>서풍(270°)은 서쪽에서 동쪽으로 불므로 화살표가 동쪽을 가리킵니다.</b> 남남서풍(202.5°)은 북북동쪽으로 향합니다. 나침반을 누르면 16방위와 실제 풍향 각도를 크게 볼 수 있습니다. 이름은 가까운 16방위로 읽으며, 화살표만 기상청 풍향 각도의 반대쪽(+180°)을 표시합니다. 무풍이거나 풍향이 없으면 화살표를 표시하지 않습니다.</div>
@@ -1178,7 +1176,7 @@ var WEATHER={key:CONFIG.TIDE_KEY,timeoutMs:6000,
   areas:{sw:{name:'서울서남권',match:/서남권|강서구?|양천구?|구로구?|영등포구?|동작구?|관악구?|금천구?/},se:{name:'서울동남권',match:/동남권|강동구?|송파구?|강남구?|서초구?/}},
   forecastUrl:'https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/',
   warningUrl:'https://apis.data.go.kr/1360000/WthrWrnInfoService/getPwnStatus'};
-var weatherState={regions:{},warning:{}}, weatherTimer=null, weatherRegionId='yeouido';
+var weatherState={regions:{},warning:{}}, weatherTimer=null;
 function weatherRegionInfo(id){
   for(var i=0;i<WEATHER.regions.length;i++)if(WEATHER.regions[i].id===id)return WEATHER.regions[i];
   return null;
@@ -1186,10 +1184,6 @@ function weatherRegionInfo(id){
 function weatherRegionState(id){
   if(!weatherRegionInfo(id))throw new Error('기상 지역 확인 필요');
   return weatherState.regions[id]||(weatherState.regions[id]={obs:{},forecast:{}});
-}
-function selectWeatherRegion(id){
-  if(!weatherRegionInfo(id))return Promise.resolve(false);
-  weatherRegionId=id;store.set('hb_weather_region_v1',id);renderWeather();return fetchWeather();
 }
 function weatherEscape(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function weatherStamp(ms){
@@ -1280,7 +1274,11 @@ function closeWeatherCompass(){
 function restoreWeatherCompassFocus(){
   document.body.classList.remove('wind-modal-open');
   var button=weatherCompassTrigger;
-  if(!button||!document.documentElement.contains(button))button=$('weatherNow').querySelector('button');
+  if(button&&!document.documentElement.contains(button)){
+    var context=button.getAttribute('data-wind-context'),buttons=$('weatherCard').querySelectorAll('button.wind-compass');button=null;
+    for(var i=0;i<buttons.length;i++)if(buttons[i].getAttribute('data-wind-context')===context){button=buttons[i];break;}
+  }
+  if(!button)button=$('weatherCard').querySelector('button.wind-compass');
   if(button)button.focus();weatherCompassTrigger=null;
 }
 function weatherObservation(items){
@@ -1313,7 +1311,6 @@ function weatherGroups(series,ms){
   });
   for(var start=Math.floor(first/(4*hour))*4*hour;start<limit;start+=4*hour){
     var g=by[String(start)]||{start:start,end:start+4*hour,rows:[],peak:null};
-    if(!g.peak&&start<now)continue;
     var expected=(Math.min(g.end,limit)-Math.max(g.start,first))/hour;
     g.partial=g.rows.length<expected;g.remaining=g.start<now;out.push(g);
   }return out;
@@ -1361,7 +1358,6 @@ function weatherSave(){
   cache.warning=saved(weatherState.warning);store.set('hb_weather_v2',JSON.stringify(cache));
 }
 function restoreWeather(){
-  var selected=store.get('hb_weather_region_v1','yeouido');weatherRegionId=weatherRegionInfo(selected)?selected:'yeouido';
   try{var c=JSON.parse(store.get('hb_weather_v2',''));if(!c)return;
     var fresh=function(s){return s&&s.data&&Date.now()>=s.at&&Date.now()-s.at<5*60000;};
     WEATHER.regions.forEach(function(r){var saved=c.regions&&c.regions[r.id];if(!saved)return;var state=weatherRegionState(r.id);['obs','forecast'].forEach(function(k){if(fresh(saved[k]))state[k]=saved[k];});});
@@ -1369,7 +1365,7 @@ function restoreWeather(){
   }catch(e){}
 }
 function fetchWeatherPart(kind,force,regionId){
-  var region=weatherRegionInfo(regionId||weatherRegionId),s=kind==='warning'?weatherState.warning:weatherRegionState(region.id)[kind],now=Date.now(),base=kind==='warning'?'':weatherBase(kind,now),ttl=kind==='warning'?5*60000:kind==='obs'?10*60000:30*60000;
+  var region=weatherRegionInfo(regionId||'yeouido'),s=kind==='warning'?weatherState.warning:weatherRegionState(region.id)[kind],now=Date.now(),base=kind==='warning'?'':weatherBase(kind,now),ttl=kind==='warning'?5*60000:kind==='obs'?10*60000:30*60000;
   if(s.pending)return s.pending;
   if(!force&&s.retryAt>now)return Promise.resolve(false);
   if(!force&&s.data&&s.base===base&&now-s.at<ttl)return Promise.resolve(true);
@@ -1386,41 +1382,62 @@ function fetchWeatherPart(kind,force,regionId){
 }
 function fetchWeather(force){
   if(!WEATHER.key||document.hidden)return Promise.resolve(false);
-  var regionId=weatherRegionId;
-  return Promise.all(['obs','forecast','warning'].map(function(k){return fetchWeatherPart(k,!!force,regionId);}));
+  var work=[fetchWeatherPart('warning',!!force)];
+  WEATHER.regions.forEach(function(r){['obs','forecast'].forEach(function(k){work.push(fetchWeatherPart(k,!!force,r.id));});});
+  return Promise.all(work);
 }
-function weatherTable(groups){
-  if(!groups.length)return '<div class="weather-note">앞으로의 예보가 없습니다</div>';
-  var today=weatherStamp(Date.now()).slice(0,8),h='<table class="weather-table"><thead><tr><th>시간</th><th>풍향</th><th>최대 예보풍속</th></tr></thead><tbody>';
-  groups.forEach(function(g){
-    var start=weatherStamp(g.start-9*3600000),end=weatherStamp(g.end-9*3600000),date=start.slice(0,8),label=date===today?'':start.slice(4,6)+'/'+start.slice(6,8);
-    var context=weatherRegionInfo(weatherRegionId).name+' '+(label?label+' ':'')+start.slice(8,10)+'–'+(end.slice(8,10)==='00'?'24':end.slice(8,10))+'시 예보';
-    h+='<tr><td>'+(label?'<span class="date">'+label+'</span>':'')+start.slice(8,10)+'–'+(end.slice(8,10)==='00'?'24':end.slice(8,10))+'시'+(g.partial&&g.peak?' <small>일부</small>':'')+(g.remaining?'<div class="weather-time">남은 시간 예보</div>':'')+'</td><td>'+(g.peak?weatherWindMarkup(g.peak.dir,g.peak.speed,context):'—')+'</td><td>'+(g.peak?'<b>'+fmt(g.peak.speed,1)+'</b> m/s':'자료 없음')+'</td></tr>';
-  });return h+'</tbody></table>';
+function weatherSlotLabel(slot,now){
+  var start=weatherStamp(slot.start-9*3600000),end=weatherStamp(slot.end-9*3600000),date=start.slice(0,8),today=weatherStamp(now).slice(0,8);
+  return (date===today?'':'<small>'+start.slice(4,6)+'/'+start.slice(6,8)+'</small>')+start.slice(8,10)+'–'+(end.slice(8,10)==='00'?'24':end.slice(8,10))+'시'+(slot.remaining?'<small>남은 예보</small>':'');
+}
+function weatherCurrentCell(region){
+  var obs=weatherRegionState(region.id).obs,age=obs.data?ymdhmAgeMin(obs.data.stamp):null;
+  if(obs.error||!obs.data||age==null||age>=120)return '<span class="weather-empty">'+(obs.error?'조회 실패':obs.data?'오래된 자료':'조회 중')+'</span>';
+  return weatherWindMarkup(obs.data.dir,obs.data.speed,region.name+' 현재 바람')+'<b class="weather-speed">'+fmt(obs.data.speed,1)+'</b>';
+}
+function weatherForecastCell(state,group){
+  if(state.error||!state.data||!group||!group.peak)return '<span class="weather-empty">'+(state.error?'조회 실패':!state.data?'조회 중':'자료 없음')+'</span>';
+  return weatherEscape(weatherWind(group.peak.dir,group.peak.speed))+'<b class="weather-speed">'+fmt(group.peak.speed,1)+'</b>'+(group.partial?'<small>일부</small>':'');
+}
+function weatherComparisonSlots(now){
+  var slots=weatherGroups([],now),hasForecast=false,hasCurrent=false,waiting=false;
+  WEATHER.regions.forEach(function(r){var fc=weatherRegionState(r.id).forecast;
+    if(!fc.data&&!fc.error)waiting=true;
+    if(fc.data&&!fc.error){hasForecast=true;weatherGroups(fc.data,now).forEach(function(g){if(g.start===slots[0].start&&g.peak)hasCurrent=true;});}
+  });
+  if(slots[0].remaining&&hasForecast&&!waiting&&!hasCurrent)slots.shift();
+  return slots;
+}
+function weatherTable(slots,includeCurrent,now){
+  var h='<table class="weather-table'+(includeCurrent?'':' weather-later')+'" aria-label="'+(includeCurrent?'세 지역 현재 바람과 4시간 최대 예보풍속':'세 지역 이후 4시간 최대 예보풍속')+' · 풍속 단위 m/s">',maps={};
+  WEATHER.regions.forEach(function(r){var fc=weatherRegionState(r.id).forecast,map={};if(fc.data&&!fc.error)weatherGroups(fc.data,now).forEach(function(g){map[g.start]=g;});maps[r.id]=map;});
+  if(includeCurrent){
+    h+='<colgroup><col style="width:20%"><col style="width:32%"><col style="width:24%"><col style="width:24%"></colgroup><thead><tr><th scope="col">지역<small>관측시각</small></th><th scope="col">현재</th>';
+    slots.forEach(function(g){h+='<th scope="col">'+weatherSlotLabel(g,now)+'</th>';});h+='</tr></thead><tbody>';
+    WEATHER.regions.forEach(function(r){var state=weatherRegionState(r.id),obs=state.obs;h+='<tr data-weather-region="'+r.id+'"><th scope="row">'+r.name+'<small>'+(obs.data&&!obs.error?ymdhmToStr(obs.data.stamp):'—')+'</small></th><td>'+weatherCurrentCell(r)+'</td>';
+      slots.forEach(function(g){h+='<td>'+weatherForecastCell(state.forecast,maps[r.id][g.start])+'</td>';});h+='</tr>';});
+  }else{
+    h+='<thead><tr><th scope="col">시간</th>';WEATHER.regions.forEach(function(r){h+='<th scope="col">'+r.name+'</th>';});h+='</tr></thead><tbody>';
+    slots.forEach(function(g){h+='<tr><th scope="row">'+weatherSlotLabel(g,now)+'</th>';WEATHER.regions.forEach(function(r){h+='<td>'+weatherForecastCell(weatherRegionState(r.id).forecast,maps[r.id][g.start])+'</td>';});h+='</tr>';});
+  }
+  return h+'</tbody></table>';
 }
 function renderWeather(){
-  var region=weatherRegionInfo(weatherRegionId),state=weatherRegionState(region.id),obs=state.obs,fc=state.forecast,warn=weatherState.warning,alert=$('weatherAlert'),status=$('weatherWarning'),details=$('weatherWarningText'),now=Date.now(),areaName=WEATHER.areas[region.area].name;
-  $('weatherRegion').value=region.id;
-  if(obs.data&&!obs.error&&ymdhmAgeMin(obs.data.stamp)!=null&&ymdhmAgeMin(obs.data.stamp)<120){
-    $('weatherNow').innerHTML=weatherWindMarkup(obs.data.dir,obs.data.speed,region.name+' 현재 바람')+' <b>'+fmt(obs.data.speed,1)+'</b> <small>m/s</small>';
-    $('weatherObsTime').textContent=ymdhmToStr(obs.data.stamp)+' 관측';
-  }else{
-    $('weatherNow').textContent=obs.error?'바람 조회 실패':obs.data?'오래된 바람 자료':'바람 불러오는 중…';$('weatherObsTime').textContent='';
-  }
-  var groups=fc.data&&!fc.error?weatherGroups(fc.data,now):[];
-  $('weatherForecast').innerHTML=fc.error?'<div class="weather-note">기상예보를 불러오지 못했습니다</div>':fc.data?weatherTable(groups.slice(0,2)):'<div class="weather-note">예보 불러오는 중…</div>';
-  $('weatherForecastMore').innerHTML=weatherTable(groups.slice(2));$('weatherMore').hidden=groups.length<=2;
-  $('weatherForecastTime').textContent=fc.data&&!fc.error?fc.base.slice(4,6)+'/'+fc.base.slice(6,8)+' '+ymdhmToStr(fc.base)+' 예보 · 출처 기상청':'';
-  var usable=warn.data&&warn.data.areas&&!warn.error&&now-warn.at<5*60000,labels=[],routeLabels=[];
+  var warn=weatherState.warning,alert=$('weatherAlert'),status=$('weatherWarning'),details=$('weatherWarningText'),now=Date.now(),groups=weatherComparisonSlots(now),bases=[],baseLabels=[];
+  $('weatherForecast').innerHTML=weatherTable(groups.slice(0,2),true,now);
+  $('weatherForecastMore').innerHTML=weatherTable(groups.slice(2),false,now);$('weatherMore').hidden=groups.length<=2;
+  WEATHER.regions.forEach(function(r){var fc=weatherRegionState(r.id).forecast;if(fc.data&&!fc.error){var b=fc.base.slice(4,6)+'/'+fc.base.slice(6,8)+' '+ymdhmToStr(fc.base);bases.push(b);baseLabels.push(r.name+' '+b);}});
+  $('weatherForecastTime').textContent=bases.length===3&&bases.every(function(b){return b===bases[0];})?bases[0]+' 예보 · 출처 기상청':baseLabels.length?'예보 발표 · '+baseLabels.join(' · ')+' · 출처 기상청':'출처 기상청';
+  var usable=warn.data&&warn.data.areas&&!warn.error&&now-warn.at<5*60000,routeLabels=[];
   if(usable){
-    ['sw','se'].forEach(function(id){var a=warn.data.areas[id],list=a.active.concat(a.pre.map(function(s){return '예비 · '+s;}));if(id===region.area)labels=list;if(list.length)routeLabels.push(WEATHER.areas[id].name+' · '+list.join(' · '));});
+    ['sw','se'].forEach(function(id){var a=warn.data.areas[id],list=a.active.concat(a.pre.map(function(s){return '예비 · '+s;}));if(list.length)routeLabels.push(WEATHER.areas[id].name+' · '+list.join(' · '));});
   }
-  status.className='weather-status'+(!usable&&warn.error?' error':labels.length?' active':'');
+  status.className='weather-status'+(!usable&&warn.error?' error':routeLabels.length?' active':'');
   if(usable){
-    status.textContent=areaName+' '+(labels.length?labels.join(' · '):'특보 없음')+' · '+ymdhmToStr(weatherStamp(warn.at))+' 확인';
+    status.textContent=(routeLabels.length?routeLabels.join(' / '):'서남권·동남권 특보 없음')+' · '+ymdhmToStr(weatherStamp(warn.at))+' 확인';
     details.innerHTML='<div>전국 특보 원문 · '+weatherEscape(warn.data.stamp.slice(4,6)+'/'+warn.data.stamp.slice(6,8)+' '+ymdhmToStr(warn.data.stamp)+' 발표')+'</div><pre>'+weatherEscape(warn.data.raw)+'</pre><div>예비특보</div><pre>'+weatherEscape(warn.data.rawPre)+'</pre>';
   }else{
-    status.textContent=areaName+(warn.error?' 특보 확인 불가':' 특보 확인 중…');
+    status.textContent=warn.error?'서남권·동남권 특보 확인 불가':'서남권·동남권 특보 확인 중…';
     details.textContent=warn.error?'기상특보를 불러오지 못했습니다. 기상청 원문을 확인해 주세요.':'최신 기상특보 확인 중…';
   }
   alert.hidden=usable?!routeLabels.length:!warn.error;
@@ -1494,7 +1511,6 @@ function setupTimer(){ if(timer){clearInterval(timer);timer=null;}
 
 /* ----- 이벤트 ----- */
 $('mAuto').onclick=function(){setMode('auto');};
-$('weatherRegion').onchange=function(){selectWeatherRegion(this.value);};
 $('weatherCard').addEventListener('click',function(e){
   var el=e.target;while(el&&el!==this){
     if(el.getAttribute&&el.getAttribute('data-wind-deg')!=null){openWeatherCompass(el);break;}el=el.parentNode;
