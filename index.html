@@ -85,6 +85,9 @@
   .chead .t.stale{color:var(--danger);font-weight:700}
   .weather-alert{display:block;margin:0 0 12px;padding:9px 11px;border:1px solid #95662e;border-radius:10px;background:rgba(245,177,61,.12);color:#ffd9a3;font-size:12px;line-height:1.5;text-decoration:none}
   .weather-alert[hidden]{display:none}
+  .weather-head{gap:6px}
+  .weather-head .nm,.weather-head .t{white-space:nowrap}
+  .weather-compass-hint{color:var(--muted);font-size:10px;font-weight:400;letter-spacing:-.02em;white-space:nowrap}
   .weather-current{display:flex;align-items:center;gap:8px;margin-bottom:8px;min-height:40px}
   .weather-current .wind{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:750;white-space:nowrap}
   .weather-current .wind small{font-size:12px;font-weight:500}
@@ -306,7 +309,7 @@
   </div>
 
   <div class="card" id="weatherCard">
-    <div class="chead"><span class="nm">기상예보</span><span class="t">여의도<span class="weather-observed" id="weatherObsTime"></span></span></div>
+    <div class="chead weather-head"><span class="nm">기상예보</span><span class="weather-compass-hint">나침반 눌러 확대</span><span class="t">여의도<span class="weather-observed" id="weatherObsTime"></span></span></div>
     <div class="weather-current"><span class="wind" id="weatherNow">바람 불러오는 중…</span></div>
     <div class="weather-status" id="weatherWarning" role="status">서울서남권 특보 확인 중…</div>
     <div id="weatherForecast">예보 불러오는 중…</div>
@@ -1362,7 +1365,7 @@ function fetchWeather(force){
 }
 function weatherTable(groups){
   if(!groups.length)return '<div class="weather-note">앞으로의 예보가 없습니다</div>';
-  var today=weatherStamp(Date.now()).slice(0,8),h='<table class="weather-table"><thead><tr><th>시간</th><th>풍향 · 눌러 확대</th><th>최대 예보풍속</th></tr></thead><tbody>';
+  var today=weatherStamp(Date.now()).slice(0,8),h='<table class="weather-table"><thead><tr><th>시간</th><th>풍향</th><th>최대 예보풍속</th></tr></thead><tbody>';
   groups.forEach(function(g){
     var start=weatherStamp(g.start-9*3600000),end=weatherStamp(g.end-9*3600000),date=start.slice(0,8),label=date===today?'':start.slice(4,6)+'/'+start.slice(6,8);
     var context=(label?label+' ':'')+start.slice(8,10)+'–'+(end.slice(8,10)==='00'?'24':end.slice(8,10))+'시 예보';
