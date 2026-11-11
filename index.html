@@ -85,9 +85,26 @@
   .chead .t.stale{color:var(--danger);font-weight:700}
   .weather-alert{display:block;margin:0 0 12px;padding:9px 11px;border:1px solid #95662e;border-radius:10px;background:rgba(245,177,61,.12);color:#ffd9a3;font-size:12px;line-height:1.5;text-decoration:none}
   .weather-alert[hidden]{display:none}
-  .weather-current{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px}
-  .weather-current .wind{font-size:20px;font-weight:750;white-space:nowrap}
+  .weather-current{display:flex;align-items:center;gap:8px;margin-bottom:8px;min-height:40px}
+  .weather-current .wind{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:750;white-space:nowrap}
   .weather-current .wind small{font-size:12px;font-weight:500}
+  .weather-observed:not(:empty)::before{content:" · "}
+  .wind-direction{display:inline-flex;align-items:center;gap:5px;vertical-align:middle}
+  .wind-compass{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:none;width:28px;height:28px;padding:0;border:0;border-radius:50%;background:none;color:inherit;cursor:pointer;font:inherit}
+  button.wind-compass::after{content:"";position:absolute;inset:-6px}
+  .wind-compass svg{display:block;width:100%;height:100%;overflow:visible}
+  .weather-current .wind-compass{width:40px;height:40px}
+  .weather-current button.wind-compass::after{inset:-2px}
+  .wind-compass.empty{opacity:.5;cursor:default}
+  .wind-dialog{position:fixed;inset:0;width:calc(100% - 32px);max-width:300px;margin:auto;padding:18px;border:1px solid #38566b;border-radius:18px;background:var(--ink2);color:var(--text);text-align:center;max-height:calc(100% - 32px);overflow-y:auto}
+  .wind-dialog:not([open]){display:none}
+  .wind-dialog::backdrop{background:rgba(0,8,16,.75)}
+  .wind-dialog h2{margin:0 0 8px;font-size:16px}
+  .wind-dialog .compass-large svg{display:block;width:224px;max-width:100%;height:auto;margin:0 auto}
+  .wind-dialog .wind-value{margin:6px 0;font-size:20px;font-weight:750;font-variant-numeric:tabular-nums}
+  .wind-dialog p{margin:10px 0 14px;color:var(--muted);font-size:12px;line-height:1.6}
+  .wind-dialog button{width:100%;padding:10px;border:1px solid #38566b;border-radius:10px;background:var(--panel);color:var(--text);font:600 13px inherit;cursor:pointer}
+  body.wind-modal-open{overflow:hidden}
   .weather-time,.weather-note{font-size:11px;color:var(--muted);line-height:1.5}
   .weather-status{font-size:11px;line-height:1.5;padding:6px 0;border-top:1px solid var(--line);color:var(--muted)}
   .weather-status.active,.weather-status.error{color:var(--caution)}
@@ -289,8 +306,8 @@
   </div>
 
   <div class="card" id="weatherCard">
-    <div class="chead"><span class="nm">기상예보</span><span class="t">여의도</span></div>
-    <div class="weather-current"><span class="wind" id="weatherNow">바람 불러오는 중…</span><span class="weather-time" id="weatherObsTime"></span></div>
+    <div class="chead"><span class="nm">기상예보</span><span class="t">여의도<span class="weather-observed" id="weatherObsTime"></span></span></div>
+    <div class="weather-current"><span class="wind" id="weatherNow">바람 불러오는 중…</span></div>
     <div class="weather-status" id="weatherWarning" role="status">서울서남권 특보 확인 중…</div>
     <div id="weatherForecast">예보 불러오는 중…</div>
     <details class="weather-detail" id="weatherMore"><summary>이후 예보</summary><div id="weatherForecastMore"></div></details>
@@ -298,6 +315,14 @@
     <div class="weather-note">4시간 중 가장 강한 시간별 바람 기준 · 순간최대풍속 아님</div>
     <details class="weather-detail" id="weatherWarningDetails"><summary>기상특보 상세</summary><div id="weatherWarningText">특보 확인 중…</div><a href="https://www.weather.go.kr/w/special-report/overall.do" target="_blank" rel="noopener noreferrer">기상청 특보 원문</a></details>
   </div>
+
+  <dialog class="wind-dialog" id="weatherWindDialog" role="dialog" aria-modal="true" aria-labelledby="weatherWindDialogTitle" aria-describedby="weatherWindDialogNote">
+    <h2 id="weatherWindDialogTitle">풍향 자세히</h2>
+    <div class="compass-large" id="weatherWindDialogPlot"></div>
+    <div class="wind-value" id="weatherWindDialogValue"></div>
+    <p id="weatherWindDialogNote">북쪽(N)은 항상 위쪽입니다.<br>밝은 바늘은 바람이 <b>불어오는 방향</b>을 가리킵니다.</p>
+    <button type="button" id="weatherWindDialogClose">닫기</button>
+  </dialog>
 
   <div id="cards"><!-- 교량 카드가 여기 삽입됨. 순서: 잠수교 → (여의도 물때) → 행주대교 → (인천 물때) -->
     <div class="card tidecard" id="yeouidoCard">
@@ -404,6 +429,9 @@
 
       <div class="q">‘기상예보’ 카드는 어떻게 보나요?</div>
       <div class="a">현재 바람은 <b>여의도 대표 격자의 기상청 관측값</b>이며 선박에서 직접 측정한 값은 아닙니다. 풍향은 바람이 <b>불어오는 방향</b>, 풍속은 <b>m/s</b>입니다. 예보는 00·04·08·12·16·20시 기준으로 나누고 각 4시간 구간에서 <b>가장 강한 시간별 예보 풍속과 그때의 풍향</b>을 보여 줍니다. 순간최대풍속을 뜻하지 않으며 일부 시각만 있으면 ‘일부’로 표시합니다. 기본 두 구간 아래 ‘이후 예보’를 펼치면 나머지를 볼 수 있습니다.<br>특보는 여의도가 속한 <b>서울서남권</b> 기준으로, 발표된 특보·예비특보가 있으면 상단에도 표시합니다. 조회 실패는 ‘특보 확인 불가’로 구분합니다. 현재 바람은 약 10분, 특보는 약 5분마다 확인하고 예보는 새 발표자료에 맞춰 갱신합니다.</div>
+
+      <div class="q">풍향 옆 작은 나침반은 어떻게 보나요?</div>
+      <div class="a">북쪽(N)은 항상 위쪽이며 <b>밝은 바늘이 바람이 불어오는 방향</b>을 가리킵니다. 예를 들어 <b>남남서풍은 남남서쪽(202.5°)에서 불어오는 바람</b>입니다. 나침반을 누르면 16방위와 실제 각도를 크게 볼 수 있습니다. 풍향 이름은 가까운 16방위로 읽고, 바늘은 기상청이 제공한 실제 각도를 그대로 표시합니다. 무풍이거나 풍향이 없으면 바늘을 표시하지 않습니다.</div>
 
       <div class="q">역류 카드의 방향 판정은 어떻게 보나요?</div>
       <div class="a">한강 수위 카드 맨 위 배지로, <b>여의도 추정 물때와 두 다리 수위 변화가 어느 방향의 가능성을 보이는지</b> 알려 줍니다.<br>
@@ -1188,6 +1216,54 @@ function weatherWind(deg,speed){
   if(deg==null||deg>360)return '풍향 없음';
   return ['북','북북동','북동','동북동','동','동남동','남동','남남동','남','남남서','남서','서남서','서','서북서','북서','북북서'][Math.round(deg/22.5)%16]+'풍';
 }
+function weatherCompassAngle(deg,speed){
+  var n=weatherNumber(deg),s=weatherNumber(speed);
+  return n==null||n>360||s==null||s===0?null:n%360;
+}
+function weatherCompassSvg(angle,large){
+  var s='<svg xmlns="http://www.w3.org/2000/svg" viewBox="'+(large?'-16 -16 132 132':'0 0 100 100')+'" aria-hidden="true" focusable="false">'+
+    '<circle cx="50" cy="50" r="34" fill="#0a1b2b" stroke="#52728c" stroke-width="1.5"/>'+
+    '<path d="M50 25V75M25 50H75" stroke="#2a475c" stroke-width="1"/>',i,a,r,x,y;
+  var names=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  for(i=0;i<16;i++){
+    s+='<path d="M50 17v'+(i%4===0?8:4)+'" transform="rotate('+(i*22.5)+' 50 50)" stroke="'+(i===0?'#f4c975':'#7c99ae')+'" stroke-width="'+(i%4===0?2:1.2)+'"/>';
+    if(large){
+      a=i*22.5*Math.PI/180;r=53;x=50+Math.sin(a)*r;y=50-Math.cos(a)*r;
+      s+='<text x="'+x.toFixed(2)+'" y="'+(y+2).toFixed(2)+'" text-anchor="middle" fill="'+(i===0?'#f4c975':'#c9dce9')+'" font-family="sans-serif" font-size="'+(i%4===0?7:5.8)+'" font-weight="'+(i%4===0?700:500)+'">'+names[i]+'</text>';
+    }
+  }
+  if(!large)s+='<text x="50" y="12" text-anchor="middle" fill="#f4c975" font-family="sans-serif" font-size="15" font-weight="700">N</text>';
+  if(angle!=null)s+='<g class="wind-needle" transform="rotate('+angle+' 50 50)"><path d="M50 51V72" stroke="#6c8ca3" stroke-width="3" stroke-linecap="round"/><path d="M50 20L58 57L50 53L42 57Z" fill="#79ddff" stroke="#c2f2ff" stroke-width=".7"/></g>';
+  return s+'<circle cx="50" cy="50" r="3" fill="#e5f8ff"/></svg>';
+}
+function weatherWindMarkup(deg,speed,context){
+  var angle=weatherCompassAngle(deg,speed),label=weatherWind(deg,speed),icon=weatherCompassSvg(angle,false);
+  var control=angle==null?'<span class="wind-compass empty" aria-hidden="true">'+icon+'</span>':
+    '<button type="button" class="wind-compass" data-wind-deg="'+angle+'" data-wind-speed="'+speed+'" data-wind-context="'+weatherEscape(context)+'" aria-haspopup="dialog" aria-controls="weatherWindDialog" aria-label="'+weatherEscape(context+' '+label+' '+angle+'도, 나침반 크게 보기')+'" title="바람이 불어오는 방향 · 눌러서 확대">'+icon+'</button>';
+  return '<span class="wind-direction">'+control+'<span>'+label+'</span></span>';
+}
+var weatherCompassTrigger=null;
+function openWeatherCompass(button){
+  var angle=weatherCompassAngle(button.getAttribute('data-wind-deg'),button.getAttribute('data-wind-speed'));
+  if(angle==null)return;
+  var dialog=$('weatherWindDialog'),label=weatherWind(angle,Number(button.getAttribute('data-wind-speed')));
+  $('weatherWindDialogTitle').textContent=button.getAttribute('data-wind-context')+' · 풍향';
+  $('weatherWindDialogPlot').innerHTML=weatherCompassSvg(angle,true);
+  $('weatherWindDialogValue').textContent=label+' · '+fmt(angle,1).replace(/\.0$/,'')+'°';
+  weatherCompassTrigger=button;
+  if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');
+  document.body.classList.add('wind-modal-open');$('weatherWindDialogClose').focus();
+}
+function closeWeatherCompass(){
+  var dialog=$('weatherWindDialog');
+  if(typeof dialog.close==='function')dialog.close();else{dialog.removeAttribute('open');restoreWeatherCompassFocus();}
+}
+function restoreWeatherCompassFocus(){
+  document.body.classList.remove('wind-modal-open');
+  var button=weatherCompassTrigger;
+  if(!button||!document.documentElement.contains(button))button=$('weatherNow').querySelector('button');
+  if(button)button.focus();weatherCompassTrigger=null;
+}
 function weatherObservation(items){
   var vals={},stamp='';
   items.forEach(function(e){vals[e.category]=weatherNumber(e.obsrValue);stamp=String(e.baseDate)+String(e.baseTime);});
@@ -1289,13 +1365,14 @@ function weatherTable(groups){
   var today=weatherStamp(Date.now()).slice(0,8),h='<table class="weather-table"><thead><tr><th>시간</th><th>풍향</th><th>최대 예보풍속</th></tr></thead><tbody>';
   groups.forEach(function(g){
     var start=weatherStamp(g.start-9*3600000),end=weatherStamp(g.end-9*3600000),date=start.slice(0,8),label=date===today?'':start.slice(4,6)+'/'+start.slice(6,8);
-    h+='<tr><td>'+(label?'<span class="date">'+label+'</span>':'')+start.slice(8,10)+'–'+(end.slice(8,10)==='00'?'24':end.slice(8,10))+'시'+(g.partial&&g.peak?' <small>일부</small>':'')+(g.remaining?'<div class="weather-time">남은 시간 예보</div>':'')+'</td><td>'+(g.peak?weatherWind(g.peak.dir,g.peak.speed):'—')+'</td><td>'+(g.peak?'<b>'+fmt(g.peak.speed,1)+'</b> m/s':'자료 없음')+'</td></tr>';
+    var context=(label?label+' ':'')+start.slice(8,10)+'–'+(end.slice(8,10)==='00'?'24':end.slice(8,10))+'시 예보';
+    h+='<tr><td>'+(label?'<span class="date">'+label+'</span>':'')+start.slice(8,10)+'–'+(end.slice(8,10)==='00'?'24':end.slice(8,10))+'시'+(g.partial&&g.peak?' <small>일부</small>':'')+(g.remaining?'<div class="weather-time">남은 시간 예보</div>':'')+'</td><td>'+(g.peak?weatherWindMarkup(g.peak.dir,g.peak.speed,context):'—')+'</td><td>'+(g.peak?'<b>'+fmt(g.peak.speed,1)+'</b> m/s':'자료 없음')+'</td></tr>';
   });return h+'</tbody></table>';
 }
 function renderWeather(){
   var obs=weatherState.obs,fc=weatherState.forecast,warn=weatherState.warning,alert=$('weatherAlert'),status=$('weatherWarning'),details=$('weatherWarningText'),now=Date.now();
   if(obs.data&&!obs.error&&ymdhmAgeMin(obs.data.stamp)!=null&&ymdhmAgeMin(obs.data.stamp)<120){
-    $('weatherNow').innerHTML=weatherWind(obs.data.dir,obs.data.speed)+' <b>'+fmt(obs.data.speed,1)+'</b> <small>m/s</small>';
+    $('weatherNow').innerHTML=weatherWindMarkup(obs.data.dir,obs.data.speed,'현재 바람')+' <b>'+fmt(obs.data.speed,1)+'</b> <small>m/s</small>';
     $('weatherObsTime').textContent=ymdhmToStr(obs.data.stamp)+' 관측';
   }else{
     $('weatherNow').textContent=obs.error?'바람 조회 실패':obs.data?'오래된 바람 자료':'바람 불러오는 중…';$('weatherObsTime').textContent='';
@@ -1384,6 +1461,20 @@ function setupTimer(){ if(timer){clearInterval(timer);timer=null;}
 
 /* ----- 이벤트 ----- */
 $('mAuto').onclick=function(){setMode('auto');};
+$('weatherCard').addEventListener('click',function(e){
+  var el=e.target;while(el&&el!==this){
+    if(el.getAttribute&&el.getAttribute('data-wind-deg')!=null){openWeatherCompass(el);break;}el=el.parentNode;
+  }
+});
+$('weatherWindDialogClose').onclick=closeWeatherCompass;
+$('weatherWindDialog').addEventListener('close',restoreWeatherCompassFocus);
+$('weatherWindDialog').addEventListener('cancel',function(e){e.preventDefault();closeWeatherCompass();});
+$('weatherWindDialog').addEventListener('click',function(e){if(e.target===this)closeWeatherCompass();});
+document.addEventListener('keydown',function(e){
+  if(!$('weatherWindDialog').hasAttribute('open'))return;
+  if(e.key==='Escape'){e.preventDefault();closeWeatherCompass();}
+  else if(e.key==='Tab'){e.preventDefault();$('weatherWindDialogClose').focus();}
+});
 $('weatherAlert').onclick=function(){$('weatherWarningDetails').open=true;};
 $('mManual').onclick=function(){setMode('manual');};
 $('refresh').onclick=function(){

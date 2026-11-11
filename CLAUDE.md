@@ -269,6 +269,10 @@ var CONFIG = {
 - `weatherItems()`는 JSON/XML과 결과코드를 확인. `weatherNumber()`는 빈 값·결측을 0으로 오인하지 않음.
 - `weatherGroups()`는 다음 24시간 예보를 4시간 구간으로 묶어 최대 시간별 풍속과 해당 풍향을 선택.
   바람이 불어오는 방향을 16방위로 표시하며 순간최대풍속이 아님. 결측 구간·남은 시간 예보를 구분.
+- `weatherCompassAngle()`/`weatherCompassSvg()`/`weatherWindMarkup()`은 풍향 이름과 SVG 나침반을 함께 표시.
+  나침반 배경은 북쪽 고정, 바늘은 API의 실제 풍향각을 그대로 회전(남남서풍=202.5°, 180° 반전 없음).
+  현재 40px/예보 28px, 무풍·결측은 바늘을 숨김. `#weatherWindDialog`에 16방위·각도를 확대하며 닫기·Escape·배경 닫기 지원.
+  기본 dialog를 지원하지 않는 환경에는 open 속성으로 폴백. 키보드 초점은 닫기 버튼에 유지하고 닫은 뒤 원래 버튼으로 복귀.
 - `weatherWarnings()`는 최신 현황의 t6(특보)·t7(예비특보)을 사용. `weatherWarningLines()`가 서울서남권·영등포·서울 전역만 필터링.
   해제된 특보를 별도 누적하지 않으며 구역 제외 문구·알 수 없는 형식·빈 응답은 확인 불가로 처리. 원문은 HTML 이스케이프.
 - `fetchWeatherPart()`는 진행 중 요청 중복을 막고 관측 10분/특보 5분/예보 30분 또는 새 발표에 갱신.
