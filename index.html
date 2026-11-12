@@ -105,6 +105,7 @@
   .wind-dialog button{width:100%;padding:10px;border:1px solid #38566b;border-radius:10px;background:var(--panel);color:var(--text);font:600 13px inherit;cursor:pointer}
   body.wind-modal-open{overflow:hidden}
   .weather-time,.weather-note{font-size:11px;color:var(--muted);line-height:1.5}
+  .weather-footer{font-size:10px;letter-spacing:-.02em;white-space:nowrap}
   .weather-status{font-size:11px;line-height:1.5;padding:6px 0;border-top:1px solid var(--line);color:var(--muted)}
   .weather-status.active,.weather-status.error{color:var(--caution)}
   .weather-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;text-align:center}
@@ -294,9 +295,8 @@
     <div class="chead weather-head"><span class="nm">기상예보</span><span class="weather-compass-hint">나침반 눌러 확대</span><span class="t">풍속 m/s</span></div>
     <div id="weatherForecast">예보 불러오는 중…</div>
     <div class="weather-status" id="weatherWarning" role="status">서남권·동남권 특보 확인 중…</div>
-    <details class="weather-detail" id="weatherMore"><summary>이후 예보</summary><div id="weatherForecastMore"></div></details>
-    <div class="weather-note" id="weatherForecastTime"></div>
-    <div class="weather-note">4시간 중 가장 강한 시간별 바람 기준 · 순간최대풍속 아님</div>
+    <details class="weather-detail" id="weatherMore"><summary>이후 예보</summary><div id="weatherForecastMore"></div><div class="weather-note" id="weatherForecastBases" hidden></div></details>
+    <div class="weather-note weather-footer" id="weatherForecastTime"></div>
     <details class="weather-detail" id="weatherWarningDetails"><summary>기상특보 상세</summary><div id="weatherWarningText">특보 확인 중…</div><a href="https://www.weather.go.kr/w/special-report/overall.do" target="_blank" rel="noopener noreferrer">기상청 특보 원문</a></details>
   </div>
 
@@ -1432,7 +1432,10 @@ function renderWeather(){
   $('weatherForecast').innerHTML=weatherTable(groups.slice(0,2),true,now);
   $('weatherForecastMore').innerHTML=weatherTable(groups.slice(2),false,now);$('weatherMore').hidden=groups.length<=2;
   WEATHER.regions.forEach(function(r){var fc=weatherRegionState(r.id).forecast;if(fc.data&&!fc.error){var b=fc.base.slice(4,6)+'/'+fc.base.slice(6,8)+' '+ymdhmToStr(fc.base);bases.push(b);baseLabels.push(r.name+' '+b);}});
-  $('weatherForecastTime').textContent=bases.length===3&&bases.every(function(b){return b===bases[0];})?bases[0]+' 예보 · 출처 기상청':baseLabels.length?'예보 발표 · '+baseLabels.join(' · ')+' · 출처 기상청':'출처 기상청';
+  var sameBase=bases.length===3&&bases.every(function(b){return b===bases[0];}),baseDetail=$('weatherForecastBases'),footer=$('weatherForecastTime');
+  footer.textContent='기상청'+(sameBase?' '+bases[0]:bases.length?' · '+(bases.length===3?'발표시각 다름':'일부 예보'):'')+' · 4시간 최대(순간최대 아님)';
+  footer.title=(baseLabels.length?'예보 발표 · '+baseLabels.join(' · ')+' · ':'')+'출처 기상청 · 4시간 중 가장 강한 시간별 바람 기준 · 순간최대풍속 아님';
+  baseDetail.hidden=sameBase||!baseLabels.length;baseDetail.textContent=baseLabels.length?'예보 발표 · '+baseLabels.join(' · '):'';
   var usable=warn.data&&warn.data.areas&&!warn.error&&now-warn.at<5*60000,routeLabels=[];
   if(usable){
     ['sw','se'].forEach(function(id){var a=warn.data.areas[id],list=a.active.concat(a.pre.map(function(s){return '예비 · '+s;}));if(list.length)routeLabels.push(WEATHER.areas[id].name+' · '+list.join(' · '));});
