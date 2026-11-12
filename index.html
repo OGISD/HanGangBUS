@@ -88,7 +88,9 @@
   .weather-head{gap:6px}
   .weather-head .nm,.weather-head .t{white-space:nowrap}
   .weather-compass-hint{color:var(--muted);font-size:10px;font-weight:400;letter-spacing:-.02em;white-space:nowrap}
-  .wind-direction{display:inline-flex;align-items:center;gap:5px;vertical-align:middle}
+  .weather-wind{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;line-height:1.4;max-width:100%}
+  .weather-wind-top{display:flex;align-items:center;justify-content:center;gap:2px;white-space:nowrap}
+  .weather-wind-name{display:block}
   .wind-compass{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:none;width:28px;height:28px;padding:0;border:0;border-radius:50%;background:none;color:inherit;cursor:pointer;font:inherit}
   button.wind-compass::after{content:"";position:absolute;inset:-6px}
   .wind-compass svg{display:block;width:100%;height:100%;overflow:visible}
@@ -110,10 +112,9 @@
   .weather-table td,.weather-table tbody th{padding:5px 0;border-top:1px solid var(--line);white-space:nowrap;vertical-align:middle}
   .weather-table tbody th{color:var(--text);font-size:12px;font-weight:600;text-align:left}
   .weather-table small{display:block;font-size:11px;font-weight:400;color:var(--muted);line-height:1.4}
-  .weather-table .wind-direction{gap:3px}
   .weather-table .wind-compass{width:22px;height:22px}
   .weather-table button.wind-compass::after{inset:-10px}
-  .weather-speed{display:block;font-size:14px;line-height:1.4;font-weight:700}
+  .weather-speed{font-size:14px;line-height:1.4;font-weight:700}
   .weather-empty{display:block;color:var(--muted);white-space:normal;overflow-wrap:anywhere;line-height:1.4}
   .weather-later thead th:first-child{text-align:left}
   .weather-detail{font-size:11px;color:var(--muted);line-height:1.55;margin-top:8px}
@@ -430,7 +431,7 @@
       <div class="a">행주대교와 한강대교의 실시간 수위를 좌우로 나란히 보여 줍니다(최근 30분 3개, ‘과거 4시간 기록’ 펼치기 가능). 한강 <b>역류</b>(밀물이 상류로 거슬러 오르는 현상) 감시에 참고합니다. <b>한강대교</b>는 마포대교 지점에 수위 관측소가 없어, 가장 가까운(<span class="num">≈3 km</span> 상류, 수위 사실상 동일) 한강대교 값을 대신 씁니다.</div>
 
       <div class="q">‘기상예보’ 카드는 어떻게 보나요?</div>
-      <div class="a">표의 세로는 <b>마곡·여의도·잠실</b>, 가로는 <b>현재 바람과 두 예보 구간</b>입니다. 지역명 아래는 현재 바람의 관측 시각이며 풍속 단위는 모두 <b>m/s</b>입니다. 현재 바람의 작은 나침반을 누르면 확대할 수 있습니다. 값은 <b>각 지역 주변 대표 격자의 기상청 관측·예보</b>로, 선착장이나 선박에서 직접 측정한 값은 아닙니다.<br>예보는 00·04·08·12·16·20시 기준 각 4시간 구간의 <b>가장 강한 시간별 예보 풍속과 그때의 풍향</b>이며 순간최대풍속이 아닙니다. 세 지역이 같은 시간 열을 공유합니다. 현재 구간 예보가 세 곳 모두 없으면 함께 다음 구간부터 표시하며, 특정 지역만 빠지면 ‘자료 없음’으로 표시합니다. 구간 일부 시각만 있으면 ‘일부’이며, 지난 시간이 포함된 구간은 ‘남은 예보’입니다. ‘이후 예보’를 펼치면 나머지를 비교할 수 있습니다.<br>특보는 마곡·여의도 <b>서울서남권</b>, 잠실 <b>서울동남권</b>을 카드와 상단 알림에서 함께 확인합니다. 조회 실패는 ‘확인 불가’로 구분합니다. 현재 바람은 약 10분, 특보는 약 5분마다 확인하고 예보는 새 발표자료에 맞춰 갱신합니다. 세 지역 자료·오류·재시도와 캐시는 각각 구분해 처리합니다.</div>
+      <div class="a">표의 세로는 <b>마곡·여의도·잠실</b>, 가로는 <b>현재 바람과 두 예보 구간</b>입니다. 지역명 아래는 현재 바람의 관측 시각이며 풍속 단위는 모두 <b>m/s</b>입니다. 모든 바람 칸은 <b>윗줄에 나침반과 풍속, 아랫줄에 풍향 이름</b>을 표시합니다. 현재·예보·이후 예보의 나침반을 누르면 해당 지역과 시간의 풍향을 확대할 수 있습니다. 값은 <b>각 지역 주변 대표 격자의 기상청 관측·예보</b>로, 선착장이나 선박에서 직접 측정한 값은 아닙니다.<br>예보는 00·04·08·12·16·20시 기준 각 4시간 구간의 <b>가장 강한 시간별 예보 풍속과 그때의 풍향</b>이며 순간최대풍속이 아닙니다. 세 지역이 같은 시간 열을 공유합니다. 현재 구간 예보가 세 곳 모두 없으면 함께 다음 구간부터 표시하며, 특정 지역만 빠지면 ‘자료 없음’으로 표시합니다. 구간 일부 시각만 있으면 ‘일부’이며, 지난 시간이 포함된 구간은 ‘남은 예보’입니다. ‘이후 예보’를 펼치면 나머지를 비교할 수 있습니다.<br>특보는 마곡·여의도 <b>서울서남권</b>, 잠실 <b>서울동남권</b>을 카드와 상단 알림에서 함께 확인합니다. 조회 실패는 ‘확인 불가’로 구분합니다. 현재 바람은 약 10분, 특보는 약 5분마다 확인하고 예보는 새 발표자료에 맞춰 갱신합니다. 세 지역 자료·오류·재시도와 캐시는 각각 구분해 처리합니다.</div>
 
       <div class="q">풍향 옆 작은 나침반은 어떻게 보나요?</div>
       <div class="a">북쪽(N)은 항상 위쪽이며 <b>화살표는 바람이 향하는 방향</b>을 가리킵니다. <b>풍향 이름과 각도는 바람이 불어오는 방위</b>입니다. 예를 들어 <b>서풍(270°)은 서쪽에서 동쪽으로 불므로 화살표가 동쪽을 가리킵니다.</b> 남남서풍(202.5°)은 북북동쪽으로 향합니다. 나침반을 누르면 16방위와 실제 풍향 각도를 크게 볼 수 있습니다. 이름은 가까운 16방위로 읽으며, 화살표만 기상청 풍향 각도의 반대쪽(+180°)을 표시합니다. 무풍이거나 풍향이 없으면 화살표를 표시하지 않습니다.</div>
@@ -1253,7 +1254,7 @@ function weatherWindMarkup(deg,speed,context){
   var angle=weatherCompassAngle(deg,speed),label=weatherWind(deg,speed),icon=weatherCompassSvg(angle,false);
   var control=angle==null?'<span class="wind-compass empty" aria-hidden="true">'+icon+'</span>':
     '<button type="button" class="wind-compass" data-wind-deg="'+angle+'" data-wind-speed="'+speed+'" data-wind-context="'+weatherEscape(context)+'" aria-haspopup="dialog" aria-controls="weatherWindDialog" aria-label="'+weatherEscape(context+' '+label+', 불어오는 방위 '+angle+'도, 화살표는 바람이 향하는 방향, 나침반 크게 보기')+'" title="화살표는 바람이 향하는 방향 · 눌러서 확대">'+icon+'</button>';
-  return '<span class="wind-direction">'+control+'<span>'+label+'</span></span>';
+  return '<span class="weather-wind"><span class="weather-wind-top">'+control+'<b class="weather-speed">'+fmt(speed,1)+'</b></span><span class="weather-wind-name">'+label+'</span></span>';
 }
 var weatherCompassTrigger=null;
 function openWeatherCompass(button){
@@ -1393,11 +1394,15 @@ function weatherSlotLabel(slot,now){
 function weatherCurrentCell(region){
   var obs=weatherRegionState(region.id).obs,age=obs.data?ymdhmAgeMin(obs.data.stamp):null;
   if(obs.error||!obs.data||age==null||age>=120)return '<span class="weather-empty">'+(obs.error?'조회 실패':obs.data?'오래된 자료':'조회 중')+'</span>';
-  return weatherWindMarkup(obs.data.dir,obs.data.speed,region.name+' 현재 바람')+'<b class="weather-speed">'+fmt(obs.data.speed,1)+'</b>';
+  return weatherWindMarkup(obs.data.dir,obs.data.speed,region.name+' 현재 바람');
 }
-function weatherForecastCell(state,group){
+function weatherForecastCell(state,group,context){
   if(state.error||!state.data||!group||!group.peak)return '<span class="weather-empty">'+(state.error?'조회 실패':!state.data?'조회 중':'자료 없음')+'</span>';
-  return weatherEscape(weatherWind(group.peak.dir,group.peak.speed))+'<b class="weather-speed">'+fmt(group.peak.speed,1)+'</b>'+(group.partial?'<small>일부</small>':'');
+  return weatherWindMarkup(group.peak.dir,group.peak.speed,context)+(group.partial?'<small>일부</small>':'');
+}
+function weatherForecastContext(region,slot){
+  var start=weatherStamp(slot.start-9*3600000),end=weatherStamp(slot.end-9*3600000);
+  return region.name+' '+start.slice(4,6)+'/'+start.slice(6,8)+' '+start.slice(8,10)+'–'+(end.slice(8,10)==='00'?'24':end.slice(8,10))+'시 예보';
 }
 function weatherComparisonSlots(now){
   var slots=weatherGroups([],now),hasForecast=false,hasCurrent=false,waiting=false;
@@ -1415,10 +1420,10 @@ function weatherTable(slots,includeCurrent,now){
     h+='<colgroup><col style="width:20%"><col style="width:32%"><col style="width:24%"><col style="width:24%"></colgroup><thead><tr><th scope="col">지역<small>관측시각</small></th><th scope="col">현재</th>';
     slots.forEach(function(g){h+='<th scope="col">'+weatherSlotLabel(g,now)+'</th>';});h+='</tr></thead><tbody>';
     WEATHER.regions.forEach(function(r){var state=weatherRegionState(r.id),obs=state.obs;h+='<tr data-weather-region="'+r.id+'"><th scope="row">'+r.name+'<small>'+(obs.data&&!obs.error?ymdhmToStr(obs.data.stamp):'—')+'</small></th><td>'+weatherCurrentCell(r)+'</td>';
-      slots.forEach(function(g){h+='<td>'+weatherForecastCell(state.forecast,maps[r.id][g.start])+'</td>';});h+='</tr>';});
+      slots.forEach(function(g){h+='<td>'+weatherForecastCell(state.forecast,maps[r.id][g.start],weatherForecastContext(r,g))+'</td>';});h+='</tr>';});
   }else{
     h+='<thead><tr><th scope="col">시간</th>';WEATHER.regions.forEach(function(r){h+='<th scope="col">'+r.name+'</th>';});h+='</tr></thead><tbody>';
-    slots.forEach(function(g){h+='<tr><th scope="row">'+weatherSlotLabel(g,now)+'</th>';WEATHER.regions.forEach(function(r){h+='<td>'+weatherForecastCell(weatherRegionState(r.id).forecast,maps[r.id][g.start])+'</td>';});h+='</tr>';});
+    slots.forEach(function(g){h+='<tr><th scope="row">'+weatherSlotLabel(g,now)+'</th>';WEATHER.regions.forEach(function(r){h+='<td>'+weatherForecastCell(weatherRegionState(r.id).forecast,maps[r.id][g.start],weatherForecastContext(r,g))+'</td>';});h+='</tr>';});
   }
   return h+'</tbody></table>';
 }

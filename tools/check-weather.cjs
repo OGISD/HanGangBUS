@@ -93,7 +93,15 @@ assert.equal(ctx.weatherComparisonSlots(compareAt)[0].start,compareSlots[1].star
 ctx.weatherRegionState('magok').forecast.data=compareRows;
 ctx.weatherRegionState('yeouido').forecast.data=compareRows;
 assert(matrix.includes('남은 예보'));
-assert(!ctx.weatherTable(compareSlots.slice(2),false,compareAt).includes('wind-compass'),'이후 예보에는 나침반을 반복하지 않음');
+const laterWithWind=ctx.weatherTable(compareSlots.slice(1,2),false,compareAt);
+assert(laterWithWind.includes('wind-compass'),'이후 예보에도 자료가 있는 셀에 나침반을 표시함');
+assert(laterWithWind.includes('data-wind-context="잠실 11/11 16–20시 예보"'),'이후 예보의 확대 문맥에 지역과 구간을 포함함');
+assert(matrix.includes('data-wind-context="마곡 11/11 12–16시 예보"'),'기본 예보의 확대 문맥에 지역과 구간을 포함함');
+const unified=ctx.weatherWindMarkup(202.5,3.2,'마곡 11/11 12–16시 예보');
+assert(unified.indexOf('weather-speed')<unified.indexOf('weather-wind-name'),'윗줄 나침반·풍속, 아랫줄 풍향 순서를 유지함');
+assert(unified.includes('data-wind-deg="202.5"')&&unified.includes('rotate(22.5 50 50)'),'예보 화살표도 원래 풍향과 이동 방향을 구분함');
+assert(!ctx.weatherForecastCell({data:[]},{peak:sample('202611111200',0,0)},'예보').includes('<button'),'무풍 예보에는 잘못된 방향 버튼을 만들지 않음');
+assert(!ctx.weatherForecastCell({error:true},{peak:sample('202611111200',2)},'예보').includes('wind-compass'),'실패한 예보에는 남아 있는 값의 나침반을 표시하지 않음');
 assert(!html.includes('id="weatherRegion"'),'지역 선택 메뉴 대신 세 정보를 동시에 표시함');
 assert(html.includes('<span class="weather-compass-hint">나침반 눌러 확대</span>'), '확대 안내는 카드 제목 옆 여백에 표시함');
 assert(!matrix.includes('눌러 확대'), '예보 표에 확대 안내를 중복 표시하지 않음');
@@ -101,6 +109,8 @@ assert(!matrix.includes(' m/s</'),'표 안에 단위를 반복하지 않음');
 const midnight = ctx.weatherGroups([sample('202612312300', 3), sample('202701010000', 4)], at('2026-12-31T23:10:00'));
 assert.equal(midnight[0].peak.speed, 3);
 assert.equal(midnight[1].peak.speed, 4);
+assert.equal(ctx.weatherForecastContext(ctx.weatherRegionInfo('magok'),midnight[0]),'마곡 12/31 20–24시 예보');
+assert.equal(ctx.weatherForecastContext(ctx.weatherRegionInfo('jamsil'),midnight[1]),'잠실 01/01 00–04시 예보');
 
 assert.equal(ctx.weatherWarningLines('o 없 음', false).length, 0);
 assert.equal(ctx.weatherWarningLines('o 강풍주의보 : 서울(서울서남권, 서울서북권), 경기도', false)[0], '강풍주의보');
@@ -167,7 +177,8 @@ async function main() {
   assert.equal(urls.filter(u=>u.includes('getPwnStatus')).length,1,'특보 요청은 세 지역이 공유함');
   const count=urls.length;
   assert.equal(urls.length,7,'세 지역 현재·예보 여섯 건과 공통 특보 한 건만 요청함');
-  assert.equal((elements.weatherForecast.innerHTML.match(/class="wind-compass"/g)||[]).length,3,'나침반은 각 지역 현재 바람에만 표시함');
+  assert.equal((elements.weatherForecast.innerHTML.match(/data-wind-context="[^"]* 현재 바람"/g)||[]).length,3,'각 지역 현재 나침반의 문맥을 구분함');
+  assert((elements.weatherForecast.innerHTML.match(/class="wind-compass"/g)||[]).length>3,'기본 표의 예보에도 나침반을 표시함');
   await ctx.fetchWeather();
   assert.equal(urls.length,count,'같은 발표 자료를 다시 요청하지 않음');
   ctx.weatherState={regions:{},warning:{}};
