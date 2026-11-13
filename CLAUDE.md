@@ -1,4 +1,4 @@
-# CLAUDE.md — 한강 교량 통과높이 모니터
+# CLAUDE.md — 한강버스 운항 도우미
 
 이 파일은 Claude Code가 이 프로젝트의 맥락을 이어받기 위한 메모입니다.
 (설명·문서는 한국어로 작성합니다.)
@@ -11,17 +11,17 @@
 
 ## 프로젝트 한 줄 요약
 **한강버스 운항 도우미** (앱 표시 이름. 제작자 표기 `오동근, Claude·GPT와 함께`, 상세 역할은 `CONTRIBUTORS.md`).
-한강 교량(잠수교·행주대교) 통과높이 + 팔당댐 방류량 + 여의도·인천 물때·조류세기 + 한강 수위·역류 경향을
+한강 교량(잠수교·행주대교) 통과높이 + 팔당댐 방류량 + 여의도·인천 물때·조류세기 + 한강 수위·역류 경향 + 마곡·여의도·잠실 기상예보·특보를
 실시간 관측과 예보로 보여주는 정적 모바일 웹앱. 소수 내부 공유용.
 
 ## 현재 배포 상태 (이미 라이브)
 - **공개 주소**: https://ogisd.github.io/HanGangBUS/
 - **저장소**: https://github.com/OGISD/HanGangBUS (GitHub 계정 OGISD)
 - **호스팅**: GitHub Pages (`main` 브랜치).
-- **현재 릴리스 기준점**: `v0.7.0`(2026-08-03) — 역류 판정 v2, 물때 연간표 백업, 운항 참고사항.
-- `v0.7.0` 이후 안정화·최적화·자동검사는 `CHANGELOG.md`의 `Unreleased` 참고.
+- **현재 릴리즈 기준점**: [`v0.8.0`](https://github.com/OGISD/HanGangBUS/releases/tag/v0.8.0)(2026-11-13) — 3지역 기상예보·풍향 나침반과 수위·물때 안정화.
+- `v0.7.0` 이후 누적 변경은 `CHANGELOG.md`의 `0.8.0`으로 확정. 이후 새 변경만 `Unreleased`에 기록.
 - **로컬 폴더가 git 저장소임.** (2026-06-22 연결 완료) `origin` = OGISD/HanGangBUS,
-  `main` 추적. 수정 반영은 `git add -A && git commit && git push` → Pages 자동 재배포.
+  `main` 추적. 수정 반영은 작업한 파일만 선택해 `git add` → `git commit` → `git push` → Pages 자동 재배포. 사용자 첨부·무관한 변경은 포함하지 않음.
   (예전 "웹에서 전체 복붙" 방식은 더 이상 안 씀.)
   - 인증: Git Credential Manager(system helper `manager`)가 처리. push 시 필요하면 로그인 창이 뜸.
   - 커밋 신원: user.name=OGISD, user.email=buwake58@naver.com (global).
@@ -313,7 +313,7 @@ var CONFIG = {
 ## 로컬 미리보기(개발용)
 - 정적 파일이라 폴더를 그대로 서빙: `python -m http.server 8137` → http://localhost:8137/
 - `.claude/launch.json` 에 미리보기 설정 있음(preview 도구용).
-- preview 도구는 dev 서버(localhost) 오리진에 묶여 있어 외부 github.io 화면 캡처는 안 됨.
+- 실제 화면 확인은 로컬 미리보기로 수행. 현재 브라우저 도구로 공개 github.io의 배포 확인도 가능.
 - 일괄 검사: `powershell -ExecutionPolicy Bypass -File tools/check-project.ps1`.
 
 ## 현재 보류된 표시 문제
@@ -321,6 +321,8 @@ var CONFIG = {
 - 이전 값을 지울지, 유지하되 실패/오래됨 표식을 강화할지는 사용자와 심층 논의 후 결정. 승인 전 변경 금지.
 
 ## 다음 할 일 후보 (상세·최신은 TASKS.md 참고)
+- 당분간 예정된 기능 수정 없음. 보류 과제는 사용자 승인 전 재개하지 않음.
+- [ ] 키 만료 전 확인: 조류예측 2027-07-06, 물때 2028-07-05. 기상 활용신청 만료는 별도 확인.
 - [ ] API 실패 때 이전 화면값을 어떻게 표시할지 심층 논의.
 - [x] 물때 API CORS·응답 형식 재점검(2026-08-04): CORS와 키는 정상. 기본 응답 JSON 변동을 확인해
   `type=xml` 명시 및 XML·JSON 이중 해석 적용. 실패 시 연간표 자동 백업은 계속 유지.
