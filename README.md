@@ -33,6 +33,7 @@
 - `tools/convert-tide.ps1` — 월별 조석표 ZIP을 연도별 JSON으로 변환
 - `tools/check-project.ps1` — 코드·확정값·연간 조석표를 한 번에 검사
 - `tools/check-weather.cjs` — 기상 날짜 경계·예보 집계·특보 필터·장애 복구 검사(일괄 검사에 포함)
+- `tools/check-tide.cjs` — 여의도 간조 08~22시 표시·익일·증감·출처 일치 검사(일괄 검사에 포함)
 - `AI_HANDOFF.md` — 새 작업 세션 인수인계
 - `CLAUDE.md` — 상세 기술 사양과 확정값
 - `TASKS.md` — 작업 현황
