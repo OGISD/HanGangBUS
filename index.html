@@ -1324,14 +1324,19 @@ function weatherWarningLines(text,preliminary,areaId){
   var raw=String(text||'').trim();
   if(!raw)throw new Error('특보 내용 없음');
   if(/^(?:o\s*)?없\s*음[.\s]*$/.test(raw))return [];
-  var parts=raw.replace(/\r/g,'').split(/(?:^|\n)\s*[o○]\s*/),out=[],parsed=0;
+  var parts=raw.replace(/\r/g,'').split(/(?:^|\n)\s*(?=[o○]\s*|\(\d+\)\s*)/),out=[],parsed=0,groupTitle='',groupPending=false;
   parts.forEach(function(line){
-    line=line.trim();if(!line)return;
+    line=line.trim().replace(/^[o○]\s*/,'');if(!line)return;
+    var heading=preliminary&&line.match(/^\(\d+\)\s*((?:강풍|호우|한파|건조|폭풍해일|풍랑|태풍|대설|황사|폭염|안개|지진해일)\s*예비특보)\s*$/);
+    // 종류 제목을 뒤따르는 시간·구역 행에만 적용하고, 내용 없는 그룹은 정상으로 처리하지 않는다.
+    if(heading){if(groupPending)throw new Error('예비특보 내용 확인 필요');groupTitle=heading[1].replace(/\s+/g,' ');groupPending=true;return;}
     var sep=line.lastIndexOf(':');if(sep<0)sep=line.lastIndexOf('：');
     if(sep<0)throw new Error('특보 구역 확인 필요');
     var title=line.slice(0,sep).trim(),areas=line.slice(sep+1).replace(/\s/g,'');
+    if(preliminary&&groupTitle&&/^\d{1,2}월\s*\d{1,2}일(?:\s*(?:새벽|아침|오전|낮|오후|저녁|밤))?(?:\s*\(\s*\d{1,2}시\s*[~∼～-]\s*\d{1,2}시\s*\))?\s*$/.test(title))title=groupTitle;
     if(!/(강풍|호우|한파|건조|폭풍해일|풍랑|태풍|대설|황사|폭염|안개|지진해일)/.test(title))throw new Error('특보 종류 확인 필요');
-    parsed++;
+    if(!areas)throw new Error('특보 구역 확인 필요');
+    parsed++;groupPending=false;
     if(/서울(?:특별시)?\([^)]*제외/.test(areas))throw new Error('특보 구역 확인 필요');
     var area=WEATHER.areas[areaId||'sw'];
     if(!area)throw new Error('특보 권역 확인 필요');
@@ -1340,7 +1345,7 @@ function weatherWarningLines(text,preliminary,areaId){
       if(out.indexOf(title)<0)out.push(title);
     }
   });
-  if(!parsed)throw new Error('특보 형식 확인 필요');return out;
+  if(!parsed||groupPending)throw new Error('특보 형식 확인 필요');return out;
 }
 function weatherWarnings(items){
   if(!items.length)throw new Error('특보현황 없음');

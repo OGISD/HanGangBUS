@@ -128,6 +128,33 @@ assert.throws(() => ctx.weatherWarningLines('응답 형식 변경', false));
 assert.throws(() => ctx.weatherWarningLines('o 강풍주의보 : 서울(서울서남권 제외)', false));
 assert.throws(() => ctx.weatherWarnings([]));
 
+// 2026-11-17 20:30 실제 응답: 예비특보 제목과 시간·구역이 서로 다른 줄에 있다.
+const nov17Warning = {tmFc:202611172030,
+  t6:'o 풍랑주의보 : 남해서부서쪽먼바다, 제주도남쪽바깥먼바다, 제주도남서쪽안쪽먼바다',
+  t7:'(1) 풍랑 예비특보\r\no 11월 18일 새벽(00시~06시) : 서해남부남쪽안쪽먼바다, 서해남부남쪽바깥먼바다, 남해동부바깥먼바다, 제주도남동쪽안쪽먼바다\r\no 11월 18일 오전(06시~12시) : 서해남부북쪽바깥먼바다, 서해중부안쪽먼바다, 서해중부바깥먼바다, 제주도앞바다(제주도동부앞바다, 제주도서부앞바다)\r\no 11월 18일 오후(12시~18시) : 동해남부북쪽안쪽먼바다, 동해남부북쪽바깥먼바다, 동해중부안쪽먼바다, 동해중부바깥먼바다, 서해남부앞바다, 서해남부북쪽안쪽먼바다, 서해중부앞바다, 남해동부안쪽먼바다, 남해서부동쪽먼바다, 제주도앞바다(제주도북부앞바다)\r\no 11월 18일 밤(18시~24시) : 동해남부남쪽안쪽먼바다, 동해남부남쪽바깥먼바다, 동해중부앞바다\r\n(2) 강풍 예비특보\r\no 11월 18일 오전(06시~12시) : 서해5도(백령도.대청도), 전북자치도(군산어청도)\r\no 11월 18일 오후(12시~18시) : 서해5도(연평도.우도), 강원도(태백, 동해산지, 삼척산지, 속초산지, 고성산지, 양양산지, 평창산지, 강릉산지, 정선평지, 정선산지, 홍천산지, 인제산지), 충청남도(태안, 당진, 서산, 서천, 보령(도서제외), 보령도서, 홍성서부), 전라남도(여수, 영암, 함평, 목포, 신안(흑산면제외), 진도, 흑산도.홍도, 거문도.초도, 영광(낙월면 제외), 영광낙월면, 고흥북부, 고흥남부, 해남북부, 해남남부, 완도(여서도 제외), 무안북부, 무안남부), 전북자치도(고창, 부안위도면, 군산(옥도면 제외), 군산옥도면(어청도 제외)), 경상북도(영양산지, 봉화산지, 울진산지), 제주도(서귀포시남부 제외), 인천(옹진, 인천영종), 울릉도.독도'
+};
+const parsedNov17=ctx.weatherWarnings([nov17Warning]);
+for (const area of ['sw','se']) {
+  assert.equal(parsedNov17.areas[area].active.length,0);
+  assert.equal(parsedNov17.areas[area].pre.length,0,'타 지역 예비특보를 서울로 오인하거나 전체 실패로 처리하지 않음');
+}
+assert.equal(parsedNov17.rawPre,nov17Warning.t7,'특보 상세에는 API 원문을 보존함');
+const groupedPre='(1) 강풍 예비특보\no 11월 18일 오전(06시~12시) : 서울(서울서남권), 부산(강서구)\no 11월 18일 오후(12시~18시) : 서울(영등포구)\n(2) 대설 예비특보\no 11월 18일 밤(18시~24시) : 서울(서울동남권)';
+assert.deepEqual(Array.from(ctx.weatherWarningLines(groupedPre,true,'sw')),['강풍 예비특보'],'그룹 제목을 시간·구역 행에 적용하고 중복 제거');
+assert.deepEqual(Array.from(ctx.weatherWarningLines(groupedPre,true,'se')),['대설 예비특보'],'두 번째 그룹의 특보 종류를 이전 그룹과 섞지 않음');
+assert.equal(ctx.weatherWarningLines('(1) 강풍 예비특보\n○ 11월 18일 오후 ： 서울(전역)',true,'se')[0],'강풍 예비특보');
+for (const malformed of [
+  '(1) 강풍 예비특보',
+  '(1) 강풍 예비특보\n(2) 대설 예비특보\no 11월 18일 오후 : 서울',
+  '(1) 강풍 예비특보\no 11월 18일 오후 : 서울\n(2) 대설 예비특보',
+  '(1) 알 수 없는 예비특보\no 11월 18일 오후 : 서울',
+  '(1) 강풍 예비특보\no 알 수 없는 시간 : 서울',
+  '(1) 강풍 예비특보\no 11월 18일 오후 :',
+  '(1) 강풍 예비특보\no 11월 18일 오후 : 서울(서울서남권 제외)',
+  'o 11월 18일 오후 : 서울'
+]) assert.throws(()=>ctx.weatherWarningLines(malformed,true),'해석 불가·제목 누락·내용 누락·제외 구역을 특보 없음으로 처리하지 않음');
+assert.throws(()=>ctx.weatherWarningLines(groupedPre,false),'그룹 예비특보 해석을 일반 특보에 잘못 적용하지 않음');
+
 async function main() {
   ctx.weatherState.warning = {data:ctx.weatherWarnings([{tmFc:'202611110200',t6:'o 없음',t7:'o 없음'}]),at:Date.now(),error:false};
   ctx.renderWeather();
@@ -149,9 +176,16 @@ async function main() {
   assert.equal(await ctx.fetchWeatherPart('warning', false), false);
   assert.equal(calls, 1, '실패 직후 자동 재요청을 제한함');
   ctx.weatherState.warning = {};
-  request = () => api([{tmFc:'202611110200',t6:'o 없 음',t7:'o 없음'}]);
+  request = () => api([nov17Warning]);
   assert.equal(await ctx.fetchWeatherPart('warning', true), true);
   assert(elements.weatherWarning.textContent.includes('특보 없음'));
+  assert(elements.weatherAlert.hidden,'그룹형 예비특보 해석 후 오류 알림을 해제함');
+  request = () => api([{...nov17Warning,t7:'(1) 강풍 예비특보'}]);
+  assert.equal(await ctx.fetchWeatherPart('warning',true),false);
+  assert(elements.weatherWarning.textContent.includes('확인 불가'),'불완전한 응답은 이전 특보 없음으로 표시하지 않음');
+  request = () => api([{...nov17Warning,t7:groupedPre}]);
+  assert.equal(await ctx.fetchWeatherPart('warning',true),true);
+  assert(!ctx.weatherState.warning.error&&elements.weatherAlert.textContent.includes('강풍 예비특보')&&elements.weatherAlert.textContent.includes('대설 예비특보'),'복구 뒤 두 권역 예비특보를 다시 안내함');
 
   ctx.weatherState.warning.data=ctx.weatherWarnings([{tmFc:'202611110200',t6:'o 호우경보 : 서울(서울동남권)',t7:'o 없음'}]);
   ctx.renderWeather();
