@@ -4,7 +4,8 @@ const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-assert(html.indexOf('id="weatherAlert"') < html.indexOf('id="weatherCard"') && html.indexOf('id="weatherCard"') < html.indexOf('id="damCard"'), '특보 알림 아래 기상예보가 첫 번째 카드임');
+assert(html.indexOf('id="weatherCard"') < html.indexOf('id="damCard"'));
+for(const id of ['weatherAlert','weatherWarning','weatherMore','weatherForecastTime']) assert(!html.includes('id="'+id+'"'),id+' 제거');
 assert.equal((html.match(/id="weatherCard"/g)||[]).length,1,'기상예보 카드를 중복 생성하지 않음');
 const block = html.slice(html.indexOf('var WEATHER='), html.indexOf('/* ----- 모드 ----- */'));
 assert(block.startsWith('var WEATHER='), '기상 구현을 찾지 못했습니다');
@@ -19,6 +20,7 @@ const ctx = vm.createContext({
   ymdhmToMs: toMs,
   ymdhmAgeMin: s => (Date.now() - (toMs(s) - 9*3600000)) / 60000,
   ymdhmToStr: s => s.slice(8,10) + ':' + s.slice(10,12),
+  STALE_MIN:30, ageStr:m=>m<1?'방금':m+'분 전',
   fmt: (n,d) => Number(n).toFixed(d),
   fetchTimed: (...args) => Promise.resolve().then(() => request(...args))
 });
@@ -81,7 +83,7 @@ for(const id of ['magok','yeouido'])ctx.weatherRegionState(id).forecast={data:co
 ctx.weatherRegionState('jamsil').forecast={data:[sample('202611111600',9)],base:'202611111400'};
 function rowFor(id,markup=elements.weatherForecast.innerHTML){return markup.match(new RegExp('<tr data-weather-region="'+id+'">([\\s\\S]*?)</tr>'))[1];}
 function currentFor(id){return rowFor(id).match(/<td>([\s\S]*?)<\/td>/)[1];}
-const matrix=ctx.weatherTable(compareSlots.slice(0,2),true,compareAt);
+const matrix=ctx.weatherTable(compareSlots.slice(0,2),compareAt);
 assert.equal((matrix.match(/data-weather-region=/g)||[]).length,3,'한 표에 세 지역 행을 표시함');
 assert(rowFor('magok',matrix).includes('>7.0</b>'));
 const jamsilCells=Array.from(rowFor('jamsil',matrix).matchAll(/<td>([\s\S]*?)<\/td>/g),m=>m[1]);
@@ -93,9 +95,7 @@ assert.equal(ctx.weatherComparisonSlots(compareAt)[0].start,compareSlots[1].star
 ctx.weatherRegionState('magok').forecast.data=compareRows;
 ctx.weatherRegionState('yeouido').forecast.data=compareRows;
 assert(matrix.includes('남은 예보'));
-const laterWithWind=ctx.weatherTable(compareSlots.slice(1,2),false,compareAt);
-assert(laterWithWind.includes('wind-compass'),'이후 예보에도 자료가 있는 셀에 나침반을 표시함');
-assert(laterWithWind.includes('data-wind-context="잠실 11/11 16–20시 예보"'),'이후 예보의 확대 문맥에 지역과 구간을 포함함');
+assert(matrix.includes('data-wind-context="잠실 11/11 16–20시 예보"'));
 assert(matrix.includes('data-wind-context="마곡 11/11 12–16시 예보"'),'기본 예보의 확대 문맥에 지역과 구간을 포함함');
 const unified=ctx.weatherWindMarkup(202.5,3.2,'마곡 11/11 12–16시 예보');
 assert(unified.indexOf('weather-speed')<unified.indexOf('weather-wind-name'),'윗줄 나침반·풍속, 아랫줄 풍향 순서를 유지함');
@@ -105,7 +105,7 @@ assert(!ctx.weatherForecastCell({error:true},{peak:sample('202611111200',2)},'�
 assert(!html.includes('id="weatherRegion"'),'지역 선택 메뉴 대신 세 정보를 동시에 표시함');
 assert(html.includes('<span class="weather-compass-hint">나침반 눌러 확대</span>'), '확대 안내는 카드 제목 옆 여백에 표시함');
 assert(!matrix.includes('눌러 확대'), '예보 표에 확대 안내를 중복 표시하지 않음');
-assert(!matrix.includes(' m/s</'),'표 안에 단위를 반복하지 않음');
+assert.equal((matrix.match(/ m\/s<\//g)||[]).length,1,'표 안의 단위는 한 번만 표시');
 const midnight = ctx.weatherGroups([sample('202612312300', 3), sample('202701010000', 4)], at('2026-12-31T23:10:00'));
 assert.equal(midnight[0].peak.speed, 3);
 assert.equal(midnight[1].peak.speed, 4);
@@ -158,15 +158,14 @@ assert.throws(()=>ctx.weatherWarningLines(groupedPre,false),'그룹 예비특보
 async function main() {
   ctx.weatherState.warning = {data:ctx.weatherWarnings([{tmFc:'202611110200',t6:'o 없음',t7:'o 없음'}]),at:Date.now(),error:false};
   ctx.renderWeather();
-  assert(elements.weatherWarning.textContent.includes('특보 없음'));
+  assert.equal(elements.weatherWarningSummary.textContent,'기상특보 상세');
   ctx.weatherState.warning.error = true;
   ctx.renderWeather();
-  assert(elements.weatherWarning.textContent.includes('확인 불가'));
-  assert(!elements.weatherAlert.hidden);
+  assert(elements.weatherWarningSummary.textContent.includes('확인 불가'));
   ctx.weatherState.warning.error = false;
   ctx.weatherState.warning.at = Date.now() - 6*60000;
   ctx.renderWeather();
-  assert(!elements.weatherWarning.textContent.includes('특보 없음'), '만료된 특보 없음은 정상 상태로 표시하지 않음');
+  assert(elements.weatherWarningText.textContent.includes('확인 중'));
   ctx.weatherState.warning = {};
   let calls = 0;
   request = () => { calls++; throw new Error('연결 실패'); };
@@ -178,19 +177,30 @@ async function main() {
   ctx.weatherState.warning = {};
   request = () => api([nov17Warning]);
   assert.equal(await ctx.fetchWeatherPart('warning', true), true);
-  assert(elements.weatherWarning.textContent.includes('특보 없음'));
-  assert(elements.weatherAlert.hidden,'그룹형 예비특보 해석 후 오류 알림을 해제함');
+  assert.equal(elements.weatherWarningSummary.textContent,'⚠ 기상특보 상세 · 인천 앞바다 영향 가능');
+  assert(elements.weatherWarningText.innerHTML.includes('인천 앞바다 주변(서해중부) · 풍랑 예비특보'));
   request = () => api([{...nov17Warning,t7:'(1) 강풍 예비특보'}]);
   assert.equal(await ctx.fetchWeatherPart('warning',true),false);
-  assert(elements.weatherWarning.textContent.includes('확인 불가'),'불완전한 응답은 이전 특보 없음으로 표시하지 않음');
+  assert(elements.weatherWarningSummary.textContent.includes('확인 불가'),'불완전한 응답은 이전 특보 없음으로 표시하지 않음');
   request = () => api([{...nov17Warning,t7:groupedPre}]);
   assert.equal(await ctx.fetchWeatherPart('warning',true),true);
-  assert(!ctx.weatherState.warning.error&&elements.weatherAlert.textContent.includes('강풍 예비특보')&&elements.weatherAlert.textContent.includes('대설 예비특보'),'복구 뒤 두 권역 예비특보를 다시 안내함');
+  assert(!ctx.weatherState.warning.error&&elements.weatherWarningText.innerHTML.includes('한강 · 강풍 예비특보 · 대설 예비특보'));
 
-  ctx.weatherState.warning.data=ctx.weatherWarnings([{tmFc:'202611110200',t6:'o 호우경보 : 서울(서울동남권)',t7:'o 없음'}]);
+  const marine = {tmFc:'202611250500',t6:'o 호우경보 : 서울(서울동남권)\no 풍랑주의보 : 인천·경기남부앞바다중북부앞평수구역',t7:'(1) 풍랑 예비특보\no 11월 25일 밤(18시~24시) : 인천.경기북부앞바다'};
+  ctx.weatherState.warning.data=ctx.weatherWarnings([marine]);
   ctx.renderWeather();
-  assert(elements.weatherWarning.textContent.includes('서울동남권')&&elements.weatherWarning.textContent.includes('호우경보'));
-  assert(!elements.weatherAlert.hidden && elements.weatherAlert.textContent.includes('서울동남권'), '선택하지 않은 잠실 권역 특보도 상단에 표시함');
+  assert.equal(elements.weatherWarningSummary.textContent,'⚠ 기상특보 상세 · 한강·인천 앞바다 영향 가능');
+  assert.equal(elements.weatherWarningSummary.className,'weather-highlight');
+  assert(elements.weatherWarningText.innerHTML.includes('한강 · 호우경보'));
+  assert(elements.weatherWarningText.innerHTML.includes('인천 앞바다 · 풍랑주의보 · 풍랑 예비특보'));
+  assert.equal(ctx.weatherWarningLines('o 풍랑주의보 : 서해중부안쪽먼바다',false,'incheon').length,0);
+  assert.equal(ctx.weatherWarningLines('o 풍랑주의보 : 인천,경기북부앞바다',false,'incheon').length,1);
+  ctx.weatherState.warning.data=ctx.weatherWarnings([{...marine,t6:'o 강풍주의보 : 경기도(파주, 김포)\no 풍랑주의보 : 서해중부안쪽먼바다',t7:'o 없음'}]);ctx.renderWeather();
+  assert(elements.weatherWarningText.innerHTML.includes('한강 주변(김포·고양·하남) · 강풍주의보'));
+  assert(elements.weatherWarningText.innerHTML.includes('인천 앞바다 주변(서해중부) · 풍랑주의보'));
+  assert.equal(ctx.weatherWarningLines('o 풍랑주의보 : 서해중부바깥먼바다',false,'seaNear').length,0);
+  ctx.weatherState.warning.at=Date.now()-6*60000;ctx.renderWeather();
+  assert.equal(elements.weatherWarningSummary.className,'','오래된 특보는 강조하지 않음');
   const urls=[];
   function responseFor(url) {
     const u=new URL(url),x=Number(u.searchParams.get('nx')),stamp=ctx.weatherStamp(Date.now());
@@ -213,19 +223,16 @@ async function main() {
   assert.equal(urls.length,7,'세 지역 현재·예보 여섯 건과 공통 특보 한 건만 요청함');
   assert.equal((elements.weatherForecast.innerHTML.match(/data-wind-context="[^"]* 현재 바람"/g)||[]).length,3,'각 지역 현재 나침반의 문맥을 구분함');
   assert((elements.weatherForecast.innerHTML.match(/class="wind-compass"/g)||[]).length>3,'기본 표의 예보에도 나침반을 표시함');
-  assert(elements.weatherForecastTime.textContent.startsWith('기상청 '));
-  assert(elements.weatherForecastTime.textContent.endsWith(' · 4시간 최대(순간최대 아님)'),'출처·발표시각·풍속 기준을 한 줄에 요약함');
-  assert(elements.weatherForecastBases.hidden,'공통 발표시각을 이후 예보에 중복 표시하지 않음');
-  const originalBase=ctx.weatherRegionState('jamsil').forecast.base;
-  ctx.weatherRegionState('jamsil').forecast.base='202611110500';ctx.renderWeather();
-  assert(elements.weatherForecastTime.textContent.includes('발표시각 다름'),'발표시각이 다르면 공통 시각인 것처럼 표시하지 않음');
-  assert(!elements.weatherForecastBases.hidden&&elements.weatherForecastBases.textContent.includes('잠실 11/11 05:00'),'지역별 발표시각은 이후 예보에서 확인 가능함');
-  ctx.weatherRegionState('jamsil').forecast.error=true;ctx.renderWeather();
-  assert(elements.weatherForecastTime.textContent.includes('일부 예보'));
-  assert(!elements.weatherForecastBases.textContent.includes('잠실'),'실패한 지역의 발표시각은 표시하지 않음');
-  ctx.weatherRegionState('jamsil').forecast.error=false;ctx.weatherRegionState('jamsil').forecast.base=originalBase;ctx.renderWeather();
-  assert(html.includes('weather-footer{font-size:10px;letter-spacing:-.02em;white-space:nowrap}'));
-  assert(!html.includes('<div class="weather-note">4시간 중'),'기준 설명만 차지하는 별도 줄을 제거함');
+  assert.match(elements.weatherUpdated.textContent,/^갱신 \d\d:\d\d · 방금$/);
+  const currentAt=Date.now();
+  for(const r of ctx.WEATHER.regions) {
+    const s=ctx.weatherRegionState(r.id);s.obs.at=s.forecast.at=currentAt-31*60000;
+  }
+  ctx.weatherState.warning.at=currentAt;
+  ctx.renderWeather();
+  assert.match(elements.weatherUpdated.textContent,/31분 전/,'특보 수신 시각은 바람 갱신 시각에 미포함');
+  assert.equal(elements.weatherUpdated.className,'t stale');
+  for(const r of ctx.WEATHER.regions) {const s=ctx.weatherRegionState(r.id);s.obs.at=s.forecast.at=currentAt;}
   await ctx.fetchWeather();
   assert.equal(urls.length,count,'같은 발표 자료를 다시 요청하지 않음');
   ctx.weatherState={regions:{},warning:{}};

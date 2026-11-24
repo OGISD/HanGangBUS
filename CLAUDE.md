@@ -264,10 +264,10 @@ var CONFIG = {
 
 ## 마곡·여의도·잠실 기상예보·특보(2026-11-12)
 
-- 새로고침·`#weatherAlert` 아래 첫 번째 카드가 `#weatherCard`이며, 그다음 `#damCard`. 일반적인 이름 `기상예보`를 사용하며 새 탭 없음.
+- 새로고침 아래 첫 번째 카드가 `#weatherCard`이며, 그다음 `#damCard`. 일반적인 이름 `기상예보`를 사용하며 새 탭 없음.
 - `WEATHER.regions`: 마곡(가양제1동) `(57,127)`, 여의도(여의동) `(59,126)`, 잠실 주변 `(62,126)` 대표 격자. 선착장 자체 관측값이 아님.
   좌표 근거: [기상청 공식 지점좌표 2026-07-01판](https://apihub.kma.go.kr/getAttachFile.do?fileName=%EB%8F%99%EB%84%A4%EC%98%88%EB%B3%B4%EC%A7%80%EC%A0%90%EC%A2%8C%ED%91%9C%28%EC%9C%84%EA%B2%BD%EB%8F%84%29_260701.xlsx). 잠실2·4·6동은 모두 `(62,126)`.
-- 지역 선택 메뉴 대신 `weatherTable(slots,true,now)`로 세 지역 행·현재/공통 두 예보 구간 열을 표시. 관측 시각은 지역명 아래, 단위 m/s는 제목에 한 번. 이전 지역 선택 저장값은 사용하지 않음.
+- 지역 선택 메뉴 대신 `weatherTable(slots,now)`로 세 지역 행·현재/공통 두 예보 구간 열을 표시. 관측 시각은 지역명 아래, 단위 m/s는 표 머리글에 한 번. 이전 지역 선택 저장값은 사용하지 않음.
 - 현재 관측 `getUltraSrtNcst`, 단기예보 `getVilageFcst`, 특보현황 `getPwnStatus`. 세 지역 현재·예보 6건과 공통 특보 1건 조회. 기존 TTL·중복 요청 방지 유지.
 - `weatherState.regions`에 지역별 obs/forecast, 공통 warning을 따로 유지. 요청 시작 시 지역을 고정해 늦게 끝난 응답도 해당 지역 자료에만 반영.
 - `weatherBase()`는 KST로 관측 발표와 하루 8회 단기예보 기준시각을 선택. 발표 직후 지연을 고려하고 실패하면 한 발표 전 자료 재시도.
@@ -275,7 +275,7 @@ var CONFIG = {
 - `weatherGroups()`는 다음 24시간 예보를 4시간 구간으로 묶어 최대 시간별 풍속과 해당 풍향을 선택.
   바람이 불어오는 방향을 16방위로 표시하며 순간최대풍속이 아님. 결측 구간·남은 시간 예보를 구분.
 - `weatherComparisonSlots()`로 공통 시간 열 결정. 현재 구간 예보가 모든 지역에 없고 각 지역 조회가 끝났으면 함께 다음 구간부터 표시. 일부 지역만 결측이면 열을 당기지 않음.
-- `weatherTable(slots,false,now)`는 이후 예보를 시간 행·세 지역 열로 표시. `weatherCurrentCell`/`weatherForecastCell`로 지역별 오류·결측·오래된 현재 자료를 구분. 예보 발표 시각이 다르면 지역별로 표시.
+- `weatherCurrentCell`/ `weatherForecastCell`로 오류·결측을 구분. 공통 두 구간만 표시.
 - `weatherCompassAngle()`/`weatherCompassSvg()`/`weatherWindMarkup()`은 현재·예보를 공통 두 줄로 표시. `.weather-wind-top`에 나침반·풍속, `.weather-wind-name`에 풍향 이름을 배치.
   `weatherForecastContext()`는 예보 확대 제목에 지역·MM/DD·시간 구간을 전달. 자정에 끝나는 구간은 24시로 표시하며 데이터의 실제 풍향·풍속은 변경하지 않음.
   나침반 배경은 북쪽 고정. SVG 내부에서만 `(angle+180)%360`으로 화살표를 회전해 바람이 향하는 쪽을 표시.
@@ -284,8 +284,8 @@ var CONFIG = {
   모든 바람 칸에 22px 나침반. 무풍·결측은 바늘을 숨김. `#weatherWindDialog`에 16방위·각도를 확대하며 닫기·Escape·배경 닫기 지원. 데이터 갱신으로 원래 버튼이 교체되어도 같은 지역·시간 문맥의 버튼으로 초점 복귀.
   기본 dialog를 지원하지 않는 환경에는 open 속성으로 폴백. 키보드 초점은 닫기 버튼에 유지하고 닫은 뒤 원래 버튼으로 복귀.
 - `.weather-head`의 제목 옆 `.weather-compass-hint`에 `나침반 눌러 확대`를 10px 보조 글씨로 표시. 안내용 줄·칸은 추가하지 않음.
-- `#weatherForecastTime.weather-footer`는 출처·발표시각·풍속 기준을 10px 한 줄로 요약. 공통 시각이 없으면 `발표시각 다름`/`일부 예보`로 구분하고 `#weatherMore` 안의 `#weatherForecastBases`에서 지역별 정확한 시각 표시. 상세 기준은 기존 도움말과 title에도 유지.
-- `weatherWarnings()`는 최신 현황의 t6(특보)·t7(예비특보)을 서남권/동남권으로 분리. 카드와 상단에 양쪽 권역 특보를 표시.
+- `#weatherUpdated`에 마지막 바람 자료 성공 수신 시각을 표시(특보 수신 제외). 이후 예보·하단 안내·별도 특보 요약 및 배너는 제거.
+- `weatherWarnings()`는 최신 현황의 t6(특보)·t7(예비특보)을 한강·인천 앞바다 및 주변 구역으로 분류. `#weatherWarningSummary`와 상세 본문에서 영향 가능 특보를 강조. 주변은 김포·고양·하남, 서해중부 앞바다·안쪽먼바다를 선별.
   서울 전역은 양쪽 포함. 서울로 명시된 부분만 해석하여 부산 강서구 등 동명 자치구를 제외.
   해제된 특보를 별도 누적하지 않으며 구역 제외 문구·알 수 없는 형식·빈 응답은 확인 불가로 처리. 원문은 HTML 이스케이프.
   `weatherWarningLines()`는 예비특보에서 번호가 붙은 종류 제목과 시간·구역 행을 분리해 해석(2026-11-17 수정). 해당 그룹의 제목을 시간 행에 적용하고 중복을 제거. 빈/알 수 없는 그룹·제목 없는 시간 행은 실패로 처리하며, 원문은 변경하지 않음. 기존 한 줄 형식과 일반 특보 해석도 유지.

@@ -9,7 +9,8 @@ const source = html.slice(html.indexOf('function addMin('), html.indexOf('/* ---
 assert(source.startsWith('function addMin('));
 const elements = {}, values = {}, phaseCalls = [];
 const ctx = vm.createContext({
-  Date, CONFIG: {}, TIDE: {lagMin: 240}, flow: {}, tideBackupDocs: {},
+  Date: class extends Date { static now() { return Date.parse('2026-08-02T12:00:00+09:00'); } },
+  CONFIG: {}, TIDE: {lagMin: 240}, flow: {}, tideBackupDocs: {},
   $: id => elements[id] || (elements[id] = {}),
   store: {get: (k, d) => values[k] || d, set: (k, v) => { values[k] = v; }},
   fmt: (n, d) => Number(n).toFixed(d), renderFlow() {},
