@@ -104,6 +104,7 @@
   body.wind-modal-open{overflow:hidden}
   .weather-detail summary.weather-highlight{color:#ffd9a3;background:rgba(245,177,61,.14);border-color:#95662e;font-weight:700}
   .weather-warning-focus{color:#ffd9a3;margin:8px 0;font-weight:700}
+  #weatherWarningText pre strong{color:#ffd9a3;font-weight:700}
   .weather-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;text-align:center}
   .weather-table th{font-size:11px;color:var(--muted);font-weight:500;padding:5px 0;white-space:nowrap}
   .weather-table td,.weather-table tbody th{padding:5px 0;border-top:1px solid var(--line);white-space:nowrap;vertical-align:middle}
@@ -1311,16 +1312,32 @@ function weatherGroups(series,ms){
     g.partial=g.rows.length<expected;g.remaining=g.start<now;out.push(g);
   }return out;
 }
-function weatherWarningLines(text,preliminary,areaId){
-  var raw=String(text||'').trim();
-  if(!raw)throw new Error('특보 내용 없음');
-  if(/^(?:o\s*)?없\s*음[.\s]*$/.test(raw))return [];
-  var parts=raw.replace(/\r/g,'').split(/(?:^|\n)\s*(?=[o○]\s*|\(\d+\)\s*)/),out=[],parsed=0,groupTitle='',groupPending=false;
-  parts.forEach(function(line){
-    line=line.trim().replace(/^[o○]\s*/,'');if(!line)return;
+var WEATHER_WARNING_AREAS=['sw','se','incheon','riverNear','seaNear'];
+function weatherWarningMatches(areas,areaId){
+  if(areaId==='incheon'||areaId==='seaNear'||areaId==='riverNear'){
+    var direct=/(?:^|[,，(])(?:인천[·ㆍ・.,-]?(?:경기)?(?:북부|남부)?앞바다|경기(?:북부|남부)앞바다)(?=$|[,，()중])/.test(areas);
+    var nearby=areaId==='seaNear'?/(?:^|[,，(])서해중부(?:앞바다|안쪽먼바다)(?=$|[,，()중])/.test(areas):
+      /(?:^|[,，])경기도?\((?:[^(),]*[,，])*(?:김포|고양|하남)(?:시)?(?=[,，)])/.test(areas);
+    return areaId==='incheon'?direct:nearby;
+  }
+  if(/서울(?:특별시)?\([^)]*제외/.test(areas))throw new Error('특보 구역 확인 필요');
+  var area=WEATHER.areas[areaId||'sw'];
+  if(!area)throw new Error('특보 권역 확인 필요');
+  var seoulParts=areas.match(/서울(?:특별시)?\([^)]*\)|서울(?:특별시)?(?:서남권|동남권|서북권|동북권)|(?:^|[,，·])서울(?:특별시)?(?:전역|전체)?(?=[,，·]|$)/g)||[];
+  return seoulParts.some(function(p){return area.match.test(p)||/전역|전체|전지역/.test(p)||/^서울(?:특별시)?$/.test(p.replace(/^[,，·]/,''));})||/(?:^|[,，])한강(?:하류|수역|전역)?(?=[,，]|$)/.test(areas);
+}
+function weatherWarningRecords(text,preliminary){
+  var raw=String(text||''),trimmed=raw.trim();
+  if(!trimmed)throw new Error('특보 내용 없음');
+  if(/^(?:o\s*)?없\s*음[.\s]*$/.test(trimmed))return [{raw:raw}];
+  // 구분 줄바꿈도 남겨 원문 순서·들여쓰기를 바꾸지 않는다.
+  var parts=raw.split(/(\r?\n[ \t]*)(?=[o○]|\(\d+\))/),records=[],parsed=0,groupTitle='',groupPending=false,headingRow=null;
+  parts.forEach(function(part,i){
+    var row={raw:part};records.push(row);
+    if(i%2)return;
+    var line=part.trim().replace(/^[o○]\s*/,'');if(!line)return;
     var heading=preliminary&&line.match(/^\(\d+\)\s*((?:강풍|호우|한파|건조|폭풍해일|풍랑|태풍|대설|황사|폭염|안개|지진해일)\s*예비특보)\s*$/);
-    // 종류 제목을 뒤따르는 시간·구역 행에만 적용하고, 내용 없는 그룹은 정상으로 처리하지 않는다.
-    if(heading){if(groupPending)throw new Error('예비특보 내용 확인 필요');groupTitle=heading[1].replace(/\s+/g,' ');groupPending=true;return;}
+    if(heading){if(groupPending)throw new Error('예비특보 내용 확인 필요');groupTitle=heading[1].replace(/\s+/g,' ');groupPending=true;headingRow=row;return;}
     var sep=line.lastIndexOf(':');if(sep<0)sep=line.lastIndexOf('：');
     if(sep<0)throw new Error('특보 구역 확인 필요');
     var title=line.slice(0,sep).trim(),areas=line.slice(sep+1).replace(/\s/g,'');
@@ -1328,29 +1345,59 @@ function weatherWarningLines(text,preliminary,areaId){
     if(!/(강풍|호우|한파|건조|폭풍해일|풍랑|태풍|대설|황사|폭염|안개|지진해일)/.test(title))throw new Error('특보 종류 확인 필요');
     if(!areas)throw new Error('특보 구역 확인 필요');
     parsed++;groupPending=false;
-    if(areaId==='incheon'||areaId==='seaNear'||areaId==='riverNear'){
-      var direct=/(?:^|[,，(])(?:인천[·ㆍ・.,-]?(?:경기)?(?:북부|남부)?앞바다|경기(?:북부|남부)앞바다)(?=$|[,，()중])/.test(areas);
-      var nearby=areaId==='seaNear'?/(?:^|[,，(])서해중부(?:앞바다|안쪽먼바다)(?=$|[,，()중])/.test(areas):
-        /(?:^|[,，])경기도?\((?:[^(),]*[,，])*(?:김포|고양|하남)(?:시)?(?=[,，)])/.test(areas);
-      if((areaId==='incheon'?direct:nearby)&&out.indexOf(title)<0)out.push(title);
-      return;
-    }
-    if(/서울(?:특별시)?\([^)]*제외/.test(areas))throw new Error('특보 구역 확인 필요');
-    var area=WEATHER.areas[areaId||'sw'];
-    if(!area)throw new Error('특보 권역 확인 필요');
-    var seoulParts=areas.match(/서울(?:특별시)?\([^)]*\)|서울(?:특별시)?(?:서남권|동남권|서북권|동북권)|(?:^|[,，·])서울(?:특별시)?(?:전역|전체)?(?=[,，·]|$)/g)||[];
-    if(seoulParts.some(function(p){return area.match.test(p)||/전역|전체|전지역/.test(p)||/^서울(?:특별시)?$/.test(p.replace(/^[,，·]/,''));})||/(?:^|[,，])한강(?:하류|수역|전역)?(?=[,，]|$)/.test(areas)){
-      if(out.indexOf(title)<0)out.push(title);
-    }
+    row.title=title;row.areas=areas;row.heading=headingRow;
   });
-  if(!parsed||groupPending)throw new Error('특보 형식 확인 필요');return out;
+  if(!parsed||groupPending)throw new Error('특보 형식 확인 필요');return records;
+}
+function weatherWarningLines(text,preliminary,areaId){
+  var out=[];
+  weatherWarningRecords(text,preliminary).forEach(function(row){
+    if(row.title&&weatherWarningMatches(row.areas,areaId)&&out.indexOf(row.title)<0)out.push(row.title);
+  });
+  return out;
+}
+function weatherBold(text){
+  return weatherEscape(text).replace(/^(\s*)([\s\S]*?)(\s*)$/, '$1<strong>$2</strong>$3');
+}
+function weatherWarningMarkup(row){
+  if(!row.emphasis)return weatherEscape(row.raw);
+  if(!row.title)return weatherBold(row.raw);
+  var sep=row.raw.lastIndexOf(':');if(sep<0)sep=row.raw.lastIndexOf('：');
+  var areas=row.raw.slice(sep+1),depth=0,start=0,out=weatherBold(row.raw.slice(0,sep))+row.raw.charAt(sep);
+  function segment(end){
+    var part=areas.slice(start,end),normalized=part.replace(/\s/g,'');
+    return WEATHER_WARNING_AREAS.some(function(id){return weatherWarningMatches(normalized,id);})?weatherBold(part):weatherEscape(part);
+  }
+  // 같은 특보에 다른 지역이 섞여도 쉼표 단위로 구분한다. 괄호 속 행정구역과 인천·경기 별칭은 한 덩어리다.
+  for(var i=0;i<areas.length;i++){
+    var ch=areas.charAt(i);
+    if(ch==='(')depth++;
+    else if(ch===')')depth--;
+    else if(!depth&&(ch===','||ch==='，')&&!(areas.slice(start,i).trim()==='인천'&&/^\s*경기(?:북부|남부)앞바다/.test(areas.slice(i+1)))){
+      out+=segment(i)+ch;start=i+1;
+    }
+  }
+  return out+segment(areas.length);
+}
+function weatherWarningSection(text,preliminary){
+  var records=weatherWarningRecords(text,preliminary),byArea={};
+  WEATHER_WARNING_AREAS.forEach(function(id){byArea[id]=[];});
+  records.forEach(function(row){
+    if(!row.title)return;
+    WEATHER_WARNING_AREAS.forEach(function(id){
+      if(!weatherWarningMatches(row.areas,id))return;
+      if(byArea[id].indexOf(row.title)<0)byArea[id].push(row.title);
+      row.emphasis=true;if(row.heading)row.heading.emphasis=true;
+    });
+  });
+  return {byArea:byArea,markup:records.map(weatherWarningMarkup).join('')};
 }
 function weatherWarnings(items){
   if(!items.length)throw new Error('특보현황 없음');
   items=items.slice().sort(function(a,b){return Number(b.tmFc)-Number(a.tmFc);});
-  var e=items[0],areas={};
-  ['sw','se','incheon','riverNear','seaNear'].forEach(function(id){areas[id]={active:weatherWarningLines(e.t6,false,id),pre:weatherWarningLines(e.t7,true,id)};});
-  return {stamp:String(e.tmFc),areas:areas,raw:String(e.t6),rawPre:String(e.t7)};
+  var e=items[0],areas={},active=weatherWarningSection(e.t6,false),pre=weatherWarningSection(e.t7,true);
+  WEATHER_WARNING_AREAS.forEach(function(id){areas[id]={active:active.byArea[id],pre:pre.byArea[id]};});
+  return {stamp:String(e.tmFc),areas:areas,raw:String(e.t6),rawPre:String(e.t7),markup:active.markup,markupPre:pre.markup};
 }
 function weatherRequest(kind,base,region){
   var url=kind==='warning'?WEATHER.warningUrl:WEATHER.forecastUrl+(kind==='obs'?'getUltraSrtNcst':'getVilageFcst');
@@ -1363,7 +1410,9 @@ function weatherSave(){
   var cache={regions:{}};
   function saved(s){return s&&s.data&&!s.error?{at:s.at,base:s.base,data:s.data}:null;}
   WEATHER.regions.forEach(function(r){var state=weatherState.regions[r.id];if(state)cache.regions[r.id]={obs:saved(state.obs),forecast:saved(state.forecast)};});
-  cache.warning=saved(weatherState.warning);store.set('hb_weather_v2',JSON.stringify(cache));
+  cache.warning=saved(weatherState.warning);
+  if(cache.warning){var d=cache.warning.data;cache.warning.data={stamp:d.stamp,areas:d.areas,raw:d.raw,rawPre:d.rawPre};}
+  store.set('hb_weather_v2',JSON.stringify(cache));
 }
 function restoreWeather(){
   try{var c=JSON.parse(store.get('hb_weather_v2',''));if(!c)return;
@@ -1454,7 +1503,7 @@ function renderWeather(){
   if(usable){
     details.innerHTML=routeLabels.map(function(s){return '<div class="weather-warning-focus">'+weatherEscape(s)+'</div>';}).join('')+
       (affected.length?'<div>주변 지역 특보는 영향 가능성 안내이며, 실제 발효 구역은 아래 원문에서 확인하세요.</div>':'')+
-      '<div>전국 특보 원문 · '+weatherEscape(warn.data.stamp.slice(4,6)+'/'+warn.data.stamp.slice(6,8)+' '+ymdhmToStr(warn.data.stamp)+' 발표')+'</div><pre>'+weatherEscape(warn.data.raw)+'</pre><div>예비특보</div><pre>'+weatherEscape(warn.data.rawPre)+'</pre>';
+      '<div>전국 특보 원문 · '+weatherEscape(warn.data.stamp.slice(4,6)+'/'+warn.data.stamp.slice(6,8)+' '+ymdhmToStr(warn.data.stamp)+' 발표')+'</div><pre>'+warn.data.markup+'</pre><div>예비특보</div><pre>'+warn.data.markupPre+'</pre>';
   }else{
     details.textContent=warn.error?'기상특보를 불러오지 못했습니다. 기상청 원문을 확인해 주세요.':'최신 기상특보 확인 중…';
   }
