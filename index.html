@@ -516,15 +516,15 @@ var API_EXPIRY=[
 var EXPIRY_WARN_DAYS=60;  // 만료 N일 전부터 경고 배너 표시
 
 var mem={};
-var store={get:function(k,d){try{var v=localStorage.getItem(k);return v===null?d:v;}catch(e){return (k in mem)?mem[k]:d;}},
-  set:function(k,v){try{localStorage.setItem(k,v);}catch(e){mem[k]=v;}}};
+var store={get:function(k,d){if(k in mem)return mem[k];try{var v=localStorage.getItem(k);return v===null?d:v;}catch(e){return d;}},
+  set:function(k,v){try{localStorage.setItem(k,v);delete mem[k];}catch(e){mem[k]=String(v);}}};
 
 /* ===== 교량 설정 (여기에 항목을 추가하면 카드가 늘어남) ===== */
 var DEFAULT_BRIDGES=[
   // offset: 통과높이 오차보정(m). warn<=noGo 이면 경고 단계 없음. lowWarn: 통과높이 초과 시 저수심(저수위) 경고.
   // noGoPrefix: 상태줄 '운항금지선…' 앞에 붙는 문구(행주=마스트 기준 표시).
-  {id:"jamsu", name:"잠수교", obscd:"1018680", base:11.76, noGo:7.3, warn:7.8, offset:0.02, lowWarn:9.1, verified:true, sampleWl:4.35},
-  {id:"haengju", name:"행주대교", obscd:"1019630", base:13.4, noGo:10.9, warn:10.9, offset:0, noGoPrefix:"마스트 장착시 ", verified:true, sampleWl:-0.2}
+  {id:"jamsu", name:"잠수교", obscd:"1018680", base:11.76, noGo:7.3, warn:7.8, offset:0.02, lowWarn:9.1, verified:true},
+  {id:"haengju", name:"행주대교", obscd:"1019630", base:13.4, noGo:10.9, warn:10.9, offset:0, noGoPrefix:"마스트 장착시 ", verified:true}
 ];
 var bridges;
 try{ bridges=JSON.parse(store.get('hb_bridges7','')); if(!Array.isArray(bridges)||!bridges.length) bridges=null; }catch(e){ bridges=null; }
@@ -557,7 +557,10 @@ function fetchTimed(url,options,timeoutMs,reader){
   options=options||{};
   if(ctrl) options.signal=ctrl.signal;
   if(ctrl) timer=setTimeout(function(){ctrl.abort();},timeoutMs);
-  return fetch(url,options).then(function(r){return reader?reader(r):r;}).catch(function(e){
+  var work=fetch(url,options).then(function(r){return reader?reader(r):r;});
+  // 요청 자체를 취소할 수 없는 브라우저에서도 느린 응답이 새로고침을 영구히 점유하지 않게 한다.
+  if(!ctrl)work=Promise.race([work,new Promise(function(_,reject){timer=setTimeout(function(){reject(new Error('응답 시간 초과'));},timeoutMs);})]);
+  return work.catch(function(e){
     if(e&&e.name==='AbortError') throw new Error('응답 시간 초과');
     throw e;
   }).then(function(value){if(timer)clearTimeout(timer);return value;},function(e){if(timer)clearTimeout(timer);throw e;});
@@ -597,12 +600,12 @@ function buildCards(){
           '<div class="big" data-r="big">—<span>m</span></div><div class="cap" data-r="cap">다리 밑 여유</div>'+
         '</div>'+
       '</div>'+
-      '<div class="cpass" data-r="cpass"></div>'+
-      '<div class="crow"><span class="dot bg-safe" data-r="dot"></span>'+
-        '<span class="st-lbl s-safe" data-r="lbl">—</span>'+
+      '<div class="cpass" data-r="cpass"><span class="n">—</span><span class="l">다리 밑 여유</span></div>'+
+      '<div class="crow"><span class="dot" data-r="dot"></span>'+
+        '<span class="st-lbl" data-r="lbl">—</span>'+
         '<span class="st-sub" data-r="sub"></span></div>'+
       '<div class="minput" data-r="minput">'+
-        '<div class="field"><input type="number" inputmode="decimal" step="0.01" data-r="wl" placeholder="현재 수위" value="'+(b.sampleWl||'')+'"><span class="u">m</span></div>'+
+        '<div class="field"><input type="number" inputmode="decimal" step="0.01" data-r="wl" placeholder="현재 수위"><span class="u">m</span></div>'+
         '<button class="apply" data-r="apply">적용</button>'+
       '</div>'+ note +
     '</div>');
@@ -618,8 +621,6 @@ function buildCards(){
   var hj=c.querySelector('.card[data-id="haengju"]'), wl=$('wlCard');
   if(hj&&wl) hj.insertAdjacentElement('afterend', wl);
   applyModeUI();
-  // 초기 표시
-  bridges.forEach(function(b){ var v=parseFloat(b.sampleWl); if(!isNaN(v)) renderBridge(b, v, nowStr()); });
 }
 
 var SCENE_H=120, SOFFIT_Y=44, ZONE=SCENE_H-SOFFIT_Y;
@@ -667,31 +668,53 @@ function renderBridge(b, wl, when, ymdhm){
 function urlFor(b){
   return 'https://api.hrfco.go.kr/'+encodeURIComponent(G.apiKey)+'/waterlevel/list/10M/'+encodeURIComponent(b.obscd)+'.json';
 }
-function pickLatest(j){var a=(j&&j.content)?j.content:(Array.isArray(j)?j:[]),best=null;
-  for(var i=0;i<a.length;i++){var w=parseFloat(a[i].wl); if(isNaN(w))continue; if(!best||(a[i].ymdhm||'')>(best.ymdhm||''))best={wl:w,ymdhm:a[i].ymdhm};} return best;}
-function fetchBridge(b){
+function hrfcoRows(j,field,key){
+  var list=Array.isArray(j)?j:j&&j.content,rows=[];
+  if(!Array.isArray(list))return rows;
+  list.forEach(function(r){
+    if(!r||typeof r.ymdhm!=='string'||!/^\d{12}$/.test(r.ymdhm))return;
+    var raw=r[field],n=(typeof raw==='number'||(typeof raw==='string'&&raw.trim()!==''))?Number(raw):NaN;
+    if(isFinite(n)){var row={ymdhm:r.ymdhm};row[key]=n;rows.push(row);}
+  });
+  return rows.sort(function(a,b){return a.ymdhm<b.ymdhm?1:a.ymdhm>b.ymdhm?-1:0;});
+}
+var coreEpoch=0, pendingReads=Object.create(null);
+// 화면 복귀·타이머·버튼이 겹쳐도 같은 자료의 진행 중 요청만 공유한다. 실패 뒤에는 다시 시도할 수 있다.
+function readOnce(key,start){
+  if(pendingReads[key]) return pendingReads[key];
+  var work=start().then(function(v){delete pendingReads[key];return v;},function(e){delete pendingReads[key];throw e;});
+  pendingReads[key]=work;return work;
+}
+function readHrfco(url,epoch,accept,fail){
+  return fetchTimed(url,{cache:'no-store'},REQUEST_TIMEOUT.hrfco,function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(function(j){if(epoch!==coreEpoch)return false;accept(j);return true;})
+    .catch(function(e){if(epoch===coreEpoch)fail(e);return false;});
+}
+function fetchBridge(b,epoch){
   if(!b.obscd){ return Promise.resolve(false); }
-  return fetchTimed(urlFor(b),{cache:'no-store'},REQUEST_TIMEOUT.hrfco,function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})
-   .then(function(t){var j;try{j=JSON.parse(t);}catch(e){throw new Error('형식 오류');}
-     var d=pickLatest(j); if(!d)throw new Error('값 없음');
+  return readHrfco(urlFor(b),epoch,function(j){
+     var d=hrfcoRows(j,'wl','wl')[0]; if(!d)throw new Error('값 없음');
      var card=document.querySelector('.card[data-id="'+b.id+'"]');
      if(card) card.querySelector('[data-r=wl]').value=fmt(d.wl,2);
-     renderBridge(b, d.wl, ymdhmToStr(d.ymdhm)||nowStr(), d.ymdhm);})
-   .then(function(){return true;})
-   .catch(function(e){ showMsg(b.name+' 자동 호출 실패: '+e.message+'. 잠시 뒤 다시 시도하거나 수동 입력을 쓰세요.', true); return false; });
+     renderBridge(b, d.wl, ymdhmToStr(d.ymdhm), d.ymdhm);
+   },function(e){ showMsg(b.name+' 자동 호출 실패: '+e.message+'. 잠시 뒤 다시 시도하거나 수동 입력을 쓰세요.', true); });
 }
 function fetchAll(forceOptional){
   fetchWeather(!!forceOptional);
-  if(!G.apiKey){ showMsg('자동 모드는 인증키가 필요합니다. 설정에서 넣어 주세요. 그 전까지는 수동 입력으로 쓸 수 있습니다.'); return Promise.resolve(false); }
-  hideMsg();
-  var core=[];
-  bridges.forEach(function(b){ if(b.obscd && b.obscd!=='1019630') core.push(fetchBridge(b)); });  // 행주(1019630)는 아래 수위 조회로 통합
-  core.push(fetchDam());
   fetchTide(!!forceOptional);
   fetchTideCur();
+  if(!G.apiKey){ showMsg('자동 모드는 인증키가 필요합니다. 설정에서 넣어 주세요. 그 전까지는 수동 입력으로 쓸 수 있습니다.'); return Promise.resolve(false); }
+  var epoch=coreEpoch;
+  return readOnce('core:'+epoch,function(){return fetchCore(epoch);});
+}
+function fetchCore(epoch){
+  hideMsg();
+  var core=[];
+  bridges.forEach(function(b){ if(b.obscd && b.obscd!=='1019630') core.push(fetchBridge(b,epoch)); });  // 행주(1019630)는 아래 수위 조회로 통합
+  core.push(fetchDam(epoch));
   var hj=null; for(var i=0;i<bridges.length;i++){ if(bridges[i].obscd==='1019630'){ hj=bridges[i]; break; } }
-  core.push(fetchWL('1019630','bfRows','bfFullRows','wlT', hj));   // 행주대교: 통과높이+수위 카드 한 번에(중복 호출 제거)
-  core.push(fetchWL('1018683','hgRows','hgFullRows','wlT'));       // 한강대교(마포대교 대체) · 신선도는 카드 공용 wlT
+  core.push(fetchWL('1019630','bfRows','bfFullRows',hj,epoch));
+  core.push(fetchWL('1018683','hgRows','hgFullRows',null,epoch));
   return Promise.all(core);
 }
 
@@ -718,21 +741,18 @@ function damUrl(){
   var sdt=new Date(now.getTime()-(DAM.lagMin+DAM.winMin+10)*60000);
   return 'https://api.hrfco.go.kr/'+encodeURIComponent(G.apiKey)+'/dam/list/10M/'+DAM.code+'/'+f(sdt)+'/'+f(now)+'.json';
 }
-function fetchDam(){
+function fetchDam(epoch){
   if(!G.apiKey) return Promise.resolve(false);
-  return fetchTimed(damUrl(),{cache:'no-store'},REQUEST_TIMEOUT.hrfco,function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})
-   .then(function(t){var j;try{j=JSON.parse(t);}catch(e){throw new Error('형식 오류');}
-     var a=(j&&j.content)?j.content:[], rows=[];
-     for(var i=0;i<a.length;i++){var v=parseFloat(a[i].tototf); if(!isNaN(v)) rows.push({ymdhm:a[i].ymdhm,v:v});}
+  return readHrfco(damUrl(),epoch,function(j){
+     var rows=hrfcoRows(j,'tototf','v');
      if(!rows.length) throw new Error('값 없음');
-     rows.sort(function(x,y){return x.ymdhm<y.ymdhm?1:-1;});  // 최신순
      var nowWin=rows.slice(0,3);
      // "4시간 전" 창은 벽시계가 아니라 최신 관측시각 기준 240분 전 — 두 창의 간격이 정확히 4시간이 됨
      var cutMs=ymdhmToMs(rows[0].ymdhm)-DAM.lagMin*60000, past=[];
-     for(i=0;i<rows.length;i++){ if(ymdhmToMs(rows[i].ymdhm)<=cutMs){ past=rows.slice(i,i+3); break; } }
-     renderDam(nowWin, past, rows); return true;})
-   .catch(function(e){ var el=$('damT'); if(el){el.className='t'; el.textContent='호출 실패';}
-      showMsg('팔당댐 방류량 호출 실패: '+e.message+'. 새로고침으로 재시도할 수 있습니다.', true); return false; });
+     for(var i=0;i<rows.length;i++){ if(ymdhmToMs(rows[i].ymdhm)<=cutMs){ past=rows.slice(i,i+3); break; } }
+     renderDam(nowWin, past, rows);
+   },function(e){ var el=$('damT'); if(el){el.className='t'; el.textContent='호출 실패';}
+      showMsg('팔당댐 방류량 호출 실패: '+e.message+'. 새로고침으로 재시도할 수 있습니다.', true); });
 }
 // 과거 4시간 전체 목록 HTML (list: 최신순 {ymdhm,val} → 과거→현재, 최신 강조)
 function histRows(list, unit, dec){
@@ -778,34 +798,39 @@ function wlUrl(code){  // HRFCO 수위 4시간 기간조회(10분 정각 정렬)
   var sdt=new Date(now.getTime()-250*60000);  // 4시간 + 여유 10분
   return 'https://api.hrfco.go.kr/'+encodeURIComponent(G.apiKey)+'/waterlevel/list/10M/'+code+'/'+f(sdt)+'/'+f(now)+'.json';
 }
-function fetchWL(code, sumId, fullId, tId, bridge){
+var wlStatuses={};
+function updateWLTime(id,stamp){
+  if(id)wlStatuses[id]=stamp;
+  var a=wlStatuses.bfRows,b=wlStatuses.hgRows,el=$('wlT');
+  el.className='t';
+  if(a===false||b===false){el.textContent='호출 실패';return;}
+  if(!a||!b){el.textContent='—';return;}
+  var oldest=a<b?a:b,age=ymdhmAgeMin(oldest),stale=age!=null&&age>=STALE_MIN;
+  el.textContent='갱신 '+ymdhmToStr(oldest)+(age==null?'':' · '+ageStr(age))+(stale?' ⚠':'');
+  if(stale)el.className='t stale';
+}
+function fetchWL(code, sumId, fullId, bridge,epoch){
   if(!G.apiKey) return Promise.resolve(false);
-  return fetchTimed(wlUrl(code),{cache:'no-store'},REQUEST_TIMEOUT.hrfco,function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})
-   .then(function(t){var j;try{j=JSON.parse(t);}catch(e){throw new Error('형식 오류');}
-     var a=(j&&j.content)?j.content:[], rows=[];
-     for(var i=0;i<a.length;i++){var w=parseFloat(a[i].wl); if(!isNaN(w)) rows.push({ymdhm:a[i].ymdhm,wl:w});}
+  return readHrfco(wlUrl(code),epoch,function(j){
+     var rows=hrfcoRows(j,'wl','wl');
      if(!rows.length) throw new Error('값 없음');
-     rows.sort(function(x,y){return x.ymdhm<y.ymdhm?1:-1;});  // 최신순
-     renderWL(rows, sumId, fullId, tId);
+     renderWL(rows, sumId, fullId);
      if(bridge){ var L=rows[0];  // 같은 관측소면 통과높이 카드도 이 최신값으로(중복 호출 제거)
        var card=document.querySelector('.card[data-id="'+bridge.id+'"]');
        if(card) card.querySelector('[data-r=wl]').value=fmt(L.wl,2);
        renderBridge(bridge, L.wl, ymdhmToStr(L.ymdhm)||nowStr(), L.ymdhm);
-     } return true;})
-   .catch(function(e){ var el=$(tId); if(el){el.className='t'; el.textContent='호출 실패';}
+     }
+   },function(e){ updateWLTime(sumId,false);renderFlow();
       if(bridge) showMsg(bridge.name+' 자동 호출 실패: '+e.message+'. 잠시 뒤 다시 시도하거나 수동 입력을 쓰세요.', true);
-      return false; });
+   });
 }
-function renderWL(rows, sumId, fullId, tId){
+function renderWL(rows, sumId, fullId){
   var a=rows.slice(0,3).reverse(), h='';  // 요약: 최근 30분 3개(과거→최신, 최신 강조)
   for(var i=0;i<a.length;i++)
     h+='<div class="drow'+(i===a.length-1?' latest':'')+'"><span class="tm">'+ymdhmToStr(a[i].ymdhm)+'</span><span class="v">'+fmt(a[i].wl,2)+' m</span></div>';
   $(sumId).innerHTML=h;
   if($(fullId)) $(fullId).innerHTML=histRows(within4h(rows).map(function(r){return {ymdhm:r.ymdhm,val:r.wl};}), ' m', 2);
-  var tEl=$(tId), latest=rows[0]?rows[0].ymdhm:null;
-  if(latest){ var label='갱신 '+ymdhmToStr(latest), age=ymdhmAgeMin(latest);
-    if(age!=null){ label+=' · '+ageStr(age); if(age>=STALE_MIN){tEl.className='t stale';label+=' ⚠';} else tEl.className='t'; }
-    tEl.textContent=label; }
+  updateWLTime(sumId,rows[0].ymdhm);
   var key = sumId==='bfRows'?'bf':(sumId==='hgRows'?'hg':null);  // 역류 판정용 추세·시계열 저장
   if(key){ flow[key]=wlTrend(rows); flow[key+'Rows']=rows; renderFlow(); }   // rows는 시간차 교차검증에 씀
 }
@@ -910,6 +935,12 @@ function flowRowsAge(rows){
 function flowRowsFresh(rows){
   var age=flowRowsAge(rows); return age!=null&&age<STALE_MIN;
 }
+function refreshFlowAge(){
+  if(G.mode!=='auto')return;
+  updateWLTime();
+  if((flow.bfRows&&!flowRowsFresh(flow.bfRows))||(flow.hgRows&&!flowRowsFresh(flow.hgRows))||
+     (flow.tide&&flow.tideDate!==kstToday()))renderFlow();
+}
 // 여의도 추정 밀물/썰물과 두 관측소 방향을 대칭적으로 판정한다. 근거가 상충하면 방향을 강제로 정하지 않는다.
 function flowVerdict(bfDir,hgDir,ph){
   var phaseDir=ph==='flood'?'up':ph==='ebb'?'down':null;
@@ -932,6 +963,7 @@ function flowVerdict(bfDir,hgDir,ph){
 }
 function renderFlow(){
   var badge=$('flowBadge'); if(!badge) return;
+  if(flow.tide&&flow.tideDate!==kstToday())flow.tide=null;
   var bothFresh=flowRowsFresh(flow.bfRows)&&flowRowsFresh(flow.hgRows);
   [['bfTrend','bfRows'],['hgTrend','hgRows']].forEach(function(pp){   // 관측소별 최신 1시간 실제 변화량
     var el=$(pp[0]); if(!el) return; var rows=flow[pp[1]], a=hourlyChangeArrow(flowRowsFresh(rows)?rows:null);
@@ -986,6 +1018,7 @@ var TIDE={ incheon:"DT_0001", lagMin:240 };  // 여의도 물때 추정 = 인천
 // maxSpeed 125는 오늘(최고 74cm/s)이 59%가 되도록 보정한 값(사리~조금에 따라 %가 오르내림).
 var TIDECUR={ lat:37.451, lon:126.592, maxSpeed:125, hours:[0,3,6,9,12,15,18,21] };
 var TIDE_RETRY_MS=30*60000, tideApiRetryAt=0;
+function kstToday(){return new Date(Date.now()+9*3600000).toISOString().slice(0,10);}
 function parseTideApi(t,ymd){
   var s=(t||'').trim(), raw=[], i;
   if(s.charAt(0)==='{'){
@@ -1011,10 +1044,12 @@ function parseTideApi(t,ymd){
   return list;
 }
 function fetchTide(force){
+  var ymd=kstToday();
+  return readOnce('tide:'+ymd,function(){return fetchDayTide(ymd,force);});
+}
+function fetchDayTide(ymd,force){
   // 물때(고저조)는 하루치 고정 예보(API가 항상 '오늘'만 줌) → 하루 1번만 받고 캐시(조류세기와 동일 패턴).
   // 역류 위상(tidePhaseNow)은 시각 기반이라 캐시된 list로 renderTide만 다시 돌려도 최신으로 갱신됨.
-  var d=new Date(Date.now()+9*3600000), p=function(n){return(n<10?'0':'')+n;};  // KST 오늘
-  var ymd=d.getUTCFullYear()+'-'+p(d.getUTCMonth()+1)+'-'+p(d.getUTCDate());
   try{ var c=JSON.parse(store.get('hb_tide','')); if(c&&c.ymd===ymd&&c.list&&c.list.length){ renderTide(c.list,c.source||'api'); return Promise.resolve(true); } }catch(e){}
   if(!CONFIG.TIDE_KEY || !CONFIG.TIDE_ENDPOINT) return fetchTideBackup(ymd);
   if(!force&&Date.now()<tideApiRetryAt) return fetchTideBackup(ymd);  // 자동 호출은 장애 뒤 30분 쉬고 재시도
@@ -1022,37 +1057,41 @@ function fetchTide(force){
   var url=CONFIG.TIDE_ENDPOINT+'?serviceKey='+encodeURIComponent(CONFIG.TIDE_KEY)+'&obsCode='+TIDE.incheon+'&type=xml';
   return fetchTimed(url,{cache:'no-store'},REQUEST_TIMEOUT.tide,function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})
    .then(function(t){
+     if(ymd!==kstToday())return false;
      var list=parseTideApi(t,ymd);
      if(list.length<3) throw new Error('값 없음');
       tideApiRetryAt=0;
       try{ store.set('hb_tide', JSON.stringify({ymd:ymd, list:list, source:'api'})); }catch(e){}  // 오늘치 API 캐시
       renderTide(list,'api'); return true;
     })
-   .catch(function(){ tideApiRetryAt=Date.now()+TIDE_RETRY_MS; return fetchTideBackup(ymd); });
+   .catch(function(){ if(ymd!==kstToday())return false;tideApiRetryAt=Date.now()+TIDE_RETRY_MS; return fetchTideBackup(ymd); });
 }
 var tideBackupDocs={};
 function loadTideBackupDoc(year){
   var template=CONFIG.TIDE_BACKUP_TEMPLATE||'';
   if(!template) return Promise.reject(new Error('연간표 경로 없음'));
-  return tideBackupDocs[year] ? Promise.resolve(tideBackupDocs[year]) :
-    fetch(template.replace('{year}',year),{cache:'default'})
-      .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+  if(tideBackupDocs[year])return Promise.resolve(tideBackupDocs[year]);
+  return readOnce('table:'+year,function(){
+    return fetchTimed(template.replace('{year}',year),{cache:'default'},REQUEST_TIMEOUT.tide,function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
       .then(function(doc){
         if(!doc||doc.stationCode!==TIDE.incheon||doc.unit!=='cm'||String(doc.year)!==year||!doc.days) throw new Error('연간표 형식 오류');
         tideBackupDocs[year]=doc; return doc;
       });
+  });
 }
 function fetchTideBackup(ymd){
   return loadTideBackupDoc(ymd.slice(0,4)).then(function(doc){
+    if(ymd!==kstToday())return false;
     var raw=doc.days[ymd]; if(!Array.isArray(raw)||raw.length<3) throw new Error('오늘 연간표 없음');
     var list=raw.map(function(e){
       if(!Array.isArray(e)||e.length!==3||!/^\d{2}:\d{2}$/.test(e[0])||(e[1]!=='high'&&e[1]!=='low')||isNaN(Number(e[2]))) throw new Error('연간표 값 오류');
       return {hm:e[0],ymd:ymd,val:Number(e[2]),high:e[1]==='high'};
     });
     renderTide(list,'table'); return true;
-  }).catch(function(){ tideFail(); return false; });
+  }).catch(function(){ if(ymd===kstToday())tideFail(); return false; });
 }
 function tideFail(){
+  flow.tide=null;renderFlow();
   ['incheonRows','yeouidoRows'].forEach(function(id){ var el=$(id);
     if(el) el.innerHTML='<div class="trow"><span class="tv">물때 정보를 불러오지 못했습니다</span></div>'; });
   ['incheonT','yeouidoT'].forEach(function(id){var el=$(id);if(el){el.textContent='—';el.className='t';el.removeAttribute('title');}});
@@ -1101,7 +1140,7 @@ function renderTide(list,source,backupChecked){
   var anchor=cache[prevYmd];
   if(anchor==null||isNaN(anchor)) anchor=tideBackupLast(prevYmd);  // 전날 앱을 열지 않았어도 연간표로 보충
   if(!backupChecked&&!tideBackupDocs[prevYear]&&CONFIG.TIDE_BACKUP_TEMPLATE){
-    loadTideBackupDoc(prevYear).then(function(){ renderTide(list,source,true); }).catch(function(){});
+    loadTideBackupDoc(prevYear).then(function(){ if(ymd===kstToday())renderTide(list,source,true); }).catch(function(){});
   }
   // 증감 = 현재 − 직전 물때 (첫 행은 어제 캐시/연간표 기준, 둘 다 없으면 null)
   sorted.forEach(function(e,i){
@@ -1124,6 +1163,7 @@ function renderTide(list,source,backupChecked){
   var prevPhaseEvents=tideBackupEvents(prevYmd), phaseList=prevPhaseEvents.concat(sorted);
   var kstNow=new Date(Date.now()+9*3600000), beforeLag=kstNow.getUTCHours()*60+kstNow.getUTCMinutes()<TIDE.lagMin;
   flow.tide=(!prevPhaseEvents.length&&beforeLag)?null:tidePhaseNow(phaseList,TIDE.lagMin);
+  flow.tideDate=ymd;
   renderFlow();   // 여의도 약 +4시간 추정 밀/썰물 위상
 }
 /* ----- 조류세기: KHOA 수치조류도 예측 유향·유속 (인천 지점) ----- */
@@ -1140,8 +1180,11 @@ function pickIncheonSpeed(j){
 }
 function fetchTideCur(){
   if(!CONFIG.TIDECUR_KEY || !CONFIG.TIDECUR_ENDPOINT) return Promise.resolve(false);
-  var d=new Date(Date.now()+9*3600000), p=function(n){return(n<10?'0':'')+n;};  // KST 오늘
-  var ymd=''+d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate());
+  var ymd=kstToday().replace(/-/g,'');
+  return readOnce('current:'+ymd,function(){return fetchDayCurrent(ymd);});
+}
+function fetchDayCurrent(ymd){
+  var p=function(n){return(n<10?'0':'')+n;};
   // 오늘치 캐시 있으면 재조회 없이 사용(하루 1번만 계산)
   try{ var c=JSON.parse(store.get('hb_tidecur','')); if(c&&c.ymd===ymd&&c.pct!=null){ renderTideCur(c.pct,false); return Promise.resolve(true); } }catch(e){}
   // 하루 여러 시각의 예측 유속 중 최고 = '오늘 하루 세기'
@@ -1154,6 +1197,7 @@ function fetchTideCur(){
      .catch(function(){});
   });
   return Promise.all(calls).then(function(){
+    if(ymd!==kstToday().replace(/-/g,''))return false;
     if(peak<=0){ var el=$('tideCur'); if(el) el.style.display='none'; return false; }
     var pct=Math.round(Math.max(0,Math.min(100, peak/TIDECUR.maxSpeed*100))), partial=valid<hrs.length;
     if(!partial) try{ store.set('hb_tidecur', JSON.stringify({ymd:ymd, pct:pct})); }catch(e){}
@@ -1480,7 +1524,8 @@ function weatherTable(slots,now){
 }
 function renderWeather(){
   var warn=weatherState.warning,summary=$('weatherWarningSummary'),details=$('weatherWarningText'),now=Date.now(),latest=0,hasError=false;
-  $('weatherForecast').innerHTML=weatherTable(weatherComparisonSlots(now).slice(0,2),now);
+  var table=$('weatherForecast'),markup=weatherTable(weatherComparisonSlots(now).slice(0,2),now);
+  if(table.lastMarkup!==markup){table.innerHTML=markup;table.lastMarkup=markup;}
   WEATHER.regions.forEach(function(r){var s=weatherRegionState(r.id);[s.obs,s.forecast].forEach(function(p){
     if(p.error)hasError=true;
     if(p.data&&!p.error&&p.at>latest&&p.at<=now)latest=p.at;
@@ -1501,16 +1546,18 @@ function renderWeather(){
   summary.className=affected.length?'weather-highlight':'';
   summary.textContent=affected.length?'⚠ 기상특보 상세 · '+affected.join('·')+' 영향 가능':warn.error?'⚠ 기상특보 상세 · 확인 불가':'기상특보 상세';
   if(usable){
-    details.innerHTML=routeLabels.map(function(s){return '<div class="weather-warning-focus">'+weatherEscape(s)+'</div>';}).join('')+
+    var warningMarkup=routeLabels.map(function(s){return '<div class="weather-warning-focus">'+weatherEscape(s)+'</div>';}).join('')+
       (affected.length?'<div>주변 지역 특보는 영향 가능성 안내이며, 실제 발효 구역은 아래 원문에서 확인하세요.</div>':'')+
       '<div>전국 특보 원문 · '+weatherEscape(warn.data.stamp.slice(4,6)+'/'+warn.data.stamp.slice(6,8)+' '+ymdhmToStr(warn.data.stamp)+' 발표')+'</div><pre>'+warn.data.markup+'</pre><div>예비특보</div><pre>'+warn.data.markupPre+'</pre>';
+    if(details.lastMarkup!==warningMarkup){details.innerHTML=warningMarkup;details.lastMarkup=warningMarkup;}
   }else{
+    details.lastMarkup=null;
     details.textContent=warn.error?'기상특보를 불러오지 못했습니다. 기상청 원문을 확인해 주세요.':'최신 기상특보 확인 중…';
   }
 }
 function setupWeatherTimer(){
   if(weatherTimer){clearInterval(weatherTimer);weatherTimer=null;}
-  if(!document.hidden)weatherTimer=setInterval(function(){renderWeather();fetchWeather();},60000);
+  if(!document.hidden)weatherTimer=setInterval(function(){refreshFlowAge();renderWeather();fetchWeather();},60000);
 }
 
 /* ----- 모드 ----- */
@@ -1530,7 +1577,13 @@ function applyModeUI(){
   if(G.mode==='manual'){ flow.bf=null; flow.hg=null; flow.bfRows=null; flow.hgRows=null; }  // 수동 모드는 수위 미조회 → 배지 비활성
   renderFlow();
 }
-function setMode(m){G.mode=m;store.set('hb_mode',m);applyModeUI();setupTimer();if(m==='auto')fetchAll();}
+function resetCoreReads(){coreEpoch++;wlStatuses={};$('wlT').className='t';$('wlT').textContent='—';}
+function setMode(m){
+  if(G.mode===m)return;
+  resetCoreReads();G.mode=m;store.set('hb_mode',m);
+  if(m==='auto')buildCards();else applyModeUI();
+  setupTimer();if(m==='auto')fetchAll();
+}
 
 /* ----- 설정 UI ----- */
 function buildBridgeSettings(){
@@ -1554,6 +1607,7 @@ function loadSettingsUI(){
   buildBridgeSettings();
 }
 function saveSettings(){
+  resetCoreReads();
   G.apiKey=$('apiKey').value.trim(); G.refreshMin=parseFloat($('refreshIn').value)||0;
   document.querySelectorAll('#bridgeSettings [data-s]').forEach(function(el){
     var i=+el.getAttribute('data-i'), k=el.getAttribute('data-s');
@@ -1612,7 +1666,7 @@ $('saveSet').onclick=saveSettings;
 document.addEventListener('visibilitychange',function(){
   setupTimer();
   setupWeatherTimer();
-  if(!document.hidden){ if(G.mode==='auto') fetchAll(); else { fetchTide(); fetchTideCur(); fetchWeather(); } }
+  if(!document.hidden){ refreshFlowAge();if(G.mode==='auto') fetchAll(); else { fetchTide(); fetchTideCur(); fetchWeather(); } }
 });
 
 /* ----- 다리 그림 온/오프 (공간 절약용, 기기에 기억) ----- */

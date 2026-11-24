@@ -212,6 +212,8 @@ foreach ($spec in $tideSpecs) {
 }
 
 if ($NodePath -and (Test-Path -LiteralPath $NodePath)) {
+  & $NodePath (Join-Path $PSScriptRoot 'check-runtime.cjs')
+  if ($LASTEXITCODE -ne 0) { Fail '새로고침·모드 전환·시각 경계·캐시 검사' }
   & $NodePath (Join-Path $PSScriptRoot 'check-tide.cjs')
   if ($LASTEXITCODE -ne 0) { Fail '여의도 간조 표시·시간 경계·원자료 유지 검사' }
   & $NodePath (Join-Path $PSScriptRoot 'check-weather.cjs')

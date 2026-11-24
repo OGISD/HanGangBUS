@@ -165,6 +165,13 @@ async function main() {
   ctx.weatherState.warning = {data:ctx.weatherWarnings([{tmFc:'202611110200',t6:'o 없음',t7:'o 없음'}]),at:Date.now(),error:false};
   ctx.renderWeather();
   assert.equal(elements.weatherWarningSummary.textContent,'기상특보 상세');
+  for(const target of [elements.weatherForecast,elements.weatherWarningText]){
+    let stored=target.innerHTML,writes=0;
+    Object.defineProperty(target,'innerHTML',{configurable:true,get(){return stored;},set(v){writes++;stored=v;}});
+    ctx.renderWeather();
+    assert.equal(writes,0,'같은 표·특보 원문이면 DOM과 나침반 버튼을 교체하지 않음');
+    delete target.innerHTML;target.innerHTML=stored;
+  }
   ctx.weatherState.warning.error = true;
   ctx.renderWeather();
   assert(elements.weatherWarningSummary.textContent.includes('확인 불가'));
