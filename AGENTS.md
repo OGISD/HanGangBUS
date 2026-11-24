@@ -32,9 +32,9 @@
 - 저장소: https://github.com/OGISD/HanGangBUS
 - 브랜치: `main`
 - 배포: `git push` 후 GitHub Pages 자동 반영
-- 현재 확정 기준점: `v0.8.0`(2026-11-13) — 3지역 기상예보·풍향 나침반과 수위·물때 안정화.
-- 릴리즈: https://github.com/OGISD/HanGangBUS/releases/tag/v0.8.0
-- `v0.7.0` 이후 누적 변경은 `CHANGELOG.md`의 `0.8.0`에 확정. 이후 새 변경만 `Unreleased`에 기록합니다.
+- 현재 확정 기준점: `v0.9.0`(2026-11-25) — 기상특보 표시 개선과 수위·물때 갱신 안정화.
+- 릴리즈: https://github.com/OGISD/HanGangBUS/releases/tag/v0.9.0
+- `v0.8.0` 이후 누적 변경은 `CHANGELOG.md`의 `0.9.0`에 확정. 이후 새 변경만 `Unreleased`에 기록합니다.
 
 ## 핵심 통과높이 공식
 

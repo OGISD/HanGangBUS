@@ -18,8 +18,8 @@
 - **공개 주소**: https://ogisd.github.io/HanGangBUS/
 - **저장소**: https://github.com/OGISD/HanGangBUS (GitHub 계정 OGISD)
 - **호스팅**: GitHub Pages (`main` 브랜치).
-- **현재 릴리즈 기준점**: [`v0.8.0`](https://github.com/OGISD/HanGangBUS/releases/tag/v0.8.0)(2026-11-13) — 3지역 기상예보·풍향 나침반과 수위·물때 안정화.
-- `v0.7.0` 이후 누적 변경은 `CHANGELOG.md`의 `0.8.0`으로 확정. 이후 새 변경만 `Unreleased`에 기록.
+- **현재 릴리즈 기준점**: [`v0.9.0`](https://github.com/OGISD/HanGangBUS/releases/tag/v0.9.0)(2026-11-25) — 기상특보 표시 개선과 수위·물때 갱신 안정화.
+- `v0.8.0` 이후 누적 변경은 `CHANGELOG.md`의 `0.9.0`으로 확정. 이후 새 변경만 `Unreleased`에 기록.
 - **로컬 폴더가 git 저장소임.** (2026-06-22 연결 완료) `origin` = OGISD/HanGangBUS,
   `main` 추적. 수정 반영은 작업한 파일만 선택해 `git add` → `git commit` → `git push` → Pages 자동 재배포. 사용자 첨부·무관한 변경은 포함하지 않음.
   (예전 "웹에서 전체 복붙" 방식은 더 이상 안 씀.)
