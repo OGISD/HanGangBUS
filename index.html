@@ -686,7 +686,10 @@ function readOnce(key,start){
   pendingReads[key]=work;return work;
 }
 function readHrfco(url,epoch,accept,fail){
-  return fetchTimed(url,{cache:'no-store'},REQUEST_TIMEOUT.hrfco,function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+  return fetchTimed(url,{cache:'no-store'},REQUEST_TIMEOUT.hrfco,function(r){
+    if(!r.ok){var err=new Error('HTTP '+r.status);err.httpStatus=r.status;throw err;}
+    return r.json();
+  })
     .then(function(j){if(epoch!==coreEpoch)return false;accept(j);return true;})
     .catch(function(e){if(epoch===coreEpoch)fail(e);return false;});
 }
@@ -745,14 +748,31 @@ function fetchDam(epoch){
   if(!G.apiKey) return Promise.resolve(false);
   return readHrfco(damUrl(),epoch,function(j){
      var rows=hrfcoRows(j,'tototf','v');
-     if(!rows.length) throw new Error('값 없음');
+     if(!rows.length){
+       var err=new Error('값 없음'),content=Array.isArray(j)?j:j&&j.content;
+       err.damEmpty=String(j&&j.code)==='990'||(Array.isArray(content)&&content.every(function(row){
+         return row&&typeof row.ymdhm==='string'&&/^\d{12}$/.test(row.ymdhm)&&
+           (row.tototf==null||(typeof row.tototf==='string'&&!row.tototf.trim()));
+       }));
+       err.damResponse=true;throw err;
+     }
      var nowWin=rows.slice(0,3);
      // "4시간 전" 창은 벽시계가 아니라 최신 관측시각 기준 240분 전 — 두 창의 간격이 정확히 4시간이 됨
      var cutMs=ymdhmToMs(rows[0].ymdhm)-DAM.lagMin*60000, past=[];
      for(var i=0;i<rows.length;i++){ if(ymdhmToMs(rows[i].ymdhm)<=cutMs){ past=rows.slice(i,i+3); break; } }
-     renderDam(nowWin, past, rows);
-   },function(e){ var el=$('damT'); if(el){el.className='t'; el.textContent='호출 실패';}
-      showMsg('팔당댐 방류량 호출 실패: '+e.message+'. 새로고침으로 재시도할 수 있습니다.', true); });
+     renderDam(nowWin, past, rows);setDamNote();
+   },function(e){
+     var responseError=e.damResponse||e.httpStatus||e.name==='SyntaxError',el=$('damT');
+     el.className='t stale';el.textContent=responseError?'방류량 확인 불가':'연결 실패';
+     setDamNote(e.damEmpty?'제공처에서 최근 방류량 값을 보내지 않아 확인할 수 없습니다.'
+       :responseError?'제공처 응답에서 방류량을 확인할 수 없습니다.'
+       :'방류량 제공처에 연결하지 못했습니다. 새로고침으로 다시 시도할 수 있습니다.');
+   });
+}
+function setDamNote(note){
+  var el=$('damNote');if(!el)return;
+  el.textContent=G.mode==='manual'?'방류량은 자동 모드에서만 조회됩니다. 위의 "자동"으로 전환하면 표시됩니다.'
+    :note||'4시간 전 방류량이 지금 여의도 부근에 도달하는 중입니다.';
 }
 // 과거 4시간 전체 목록 HTML (list: 최신순 {ymdhm,val} → 과거→현재, 최신 강조)
 function histRows(list, unit, dec){
@@ -1566,10 +1586,7 @@ function applyModeUI(){
   $('mManual').className=G.mode==='manual'?'on':'';
   document.querySelectorAll('[data-r=minput]').forEach(function(el){
     el.className='minput'+(G.mode==='manual'?' show':'');});
-  var dn=$('damNote');
-  if(dn) dn.textContent = G.mode==='manual'
-    ? '방류량은 자동 모드에서만 조회됩니다. 위의 "자동"으로 전환하면 표시됩니다.'
-    : '4시간 전 방류량이 지금 여의도 부근에 도달하는 중입니다.';
+  setDamNote();
   var wn=$('wlNote');
   if(wn) wn.textContent = G.mode==='manual'
     ? '한강 수위(행주·한강대교)는 자동 모드에서만 조회됩니다.'
@@ -1655,7 +1672,7 @@ $('refresh').onclick=function(){
     fetchTide(true); fetchTideCur(); fetchWeather(true); work=Promise.resolve(true); }
   Promise.resolve(work).then(function(result){
     var ok=result!==false&&(!Array.isArray(result)||result.every(function(v){return v!==false;}));
-    btn.textContent=ok?'✓ 새로고침됨':'⚠ 일부 호출 실패'; btn.className='btn primary done';
+    btn.textContent=ok?'✓ 새로고침됨':'⚠ 일부 자료 확인 불가'; btn.className='btn primary done';
     setTimeout(function(){ btn.disabled=false; btn.removeAttribute('aria-busy'); btn.textContent='새로고침'; btn.className='btn primary'; }, 1300);
   },function(){
     btn.textContent='⚠ 새로고침 실패'; btn.className='btn primary done';

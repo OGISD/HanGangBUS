@@ -66,6 +66,23 @@ async function check(){
   next[3].ok({content:hrfco.content.map(r=>({...r,ymdhm:r.ymdhm.replace('1150','1145')}))});
   finish(next.slice(0,3),hrfco);await retry;
   assert.match(el('wlT').textContent,/11:45/,'공용 시각은 더 오래된 관측 기준');
+  async function damReply(send){
+    const work=ctx.fetchDam(ctx.coreEpoch);send(requests.shift());return work;
+  }
+  const beforeDam=el('damNowRows').innerHTML;
+  for(const response of [{content:[{ymdhm:'202611251150',tototf:' '}]},{code:'990'}]){
+    assert.equal(await damReply(r=>r.ok(response)),false);
+    assert.equal(el('damT').textContent,'방류량 확인 불가');
+    assert.match(el('damNote').textContent,/최근 방류량 값을 보내지 않아/);
+    assert.equal(el('damNowRows').innerHTML,beforeDam,'공란을 0으로 표시하거나 기존 값을 교체하지 않음');
+    assert(!el('msg').textContent,'카드 밖에 방류량 안내 줄을 추가하지 않음');
+  }
+  assert.equal(await damReply(r=>r.fail()),false);
+  assert.equal(el('damT').textContent,'연결 실패');
+  assert.equal(await damReply(r=>r.ok({content:[{ymdhm:'202611251150',tototf:'0'}]})),true);
+  assert.match(el('damNowRows').innerHTML,/>0\.0</,'실제 0은 유효한 방류값');
+  assert.match(el('damT').textContent,/갱신/);
+  assert.match(el('damNote').textContent,/도달하는 중/);
   now+=15*60000;ctx.refreshFlowAge();
   assert.match(el('flowBadge').innerHTML,/판정 보류/,'후속 수신 없이 정확히 30분 경계가 지나도 보류');
 
