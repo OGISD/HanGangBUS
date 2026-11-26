@@ -7,6 +7,17 @@ const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 assert(html.indexOf('id="weatherCard"') < html.indexOf('id="damCard"'));
 for(const id of ['weatherAlert','weatherWarning','weatherMore','weatherForecastTime']) assert(!html.includes('id="'+id+'"'),id+' 제거');
 assert.equal((html.match(/id="weatherCard"/g)||[]).length,1,'기상예보 카드를 중복 생성하지 않음');
+assert.match(html,/<details class="hist weather-detail" id="weatherWarningDetails">/,'과거 기록과 같은 접이식 스타일 사용');
+assert.match(html,/<a id="weatherOfficialLink"[^>]* hidden>/,'일반 화면에서 기상청 링크는 처음부터 숨김');
+const adminCode=html.slice(html.indexOf('function adminUnlocked()'),html.indexOf('if(/[?&#]admin'));
+let admin='0';
+const adminEls={setPanel:{style:{}},flowDiag:{style:{}},weatherOfficialLink:{hidden:true}};
+const adminCtx=vm.createContext({store:{get:()=>admin},$:id=>adminEls[id]});
+vm.runInContext(adminCode,adminCtx);
+for(const mode of ['0','1','0']){
+  admin=mode;adminCtx.applyAdmin();
+  assert.equal(adminEls.weatherOfficialLink.hidden,adminEls.setPanel.style.display==='none','원문 링크가 설정 카드 공개 상태를 따라감');
+}
 const block = html.slice(html.indexOf('var WEATHER='), html.indexOf('/* ----- 모드 ----- */'));
 assert(block.startsWith('var WEATHER='), '기상 구현을 찾지 못했습니다');
 const elements = {};

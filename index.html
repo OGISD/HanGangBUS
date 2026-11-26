@@ -102,7 +102,7 @@
   .wind-dialog p{margin:10px 0 14px;color:var(--muted);font-size:12px;line-height:1.6}
   .wind-dialog button{width:100%;padding:10px;border:1px solid #38566b;border-radius:10px;background:var(--panel);color:var(--text);font:600 13px inherit;cursor:pointer}
   body.wind-modal-open{overflow:hidden}
-  .weather-detail summary.weather-highlight{color:#ffd9a3;background:rgba(245,177,61,.14);border-color:#95662e;font-weight:700}
+  .weather-detail summary.weather-highlight{color:#ffd9a3;font-weight:700}
   .weather-warning-focus{color:#ffd9a3;margin:8px 0;font-weight:700}
   #weatherWarningText pre strong{color:#ffd9a3;font-weight:700}
   .weather-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;text-align:center}
@@ -114,10 +114,7 @@
   .weather-table button.wind-compass::after{inset:-10px}
   .weather-speed{font-size:14px;line-height:1.4;font-weight:700}
   .weather-empty{display:block;color:var(--muted);white-space:normal;overflow-wrap:anywhere;line-height:1.4}
-  .weather-detail{font-size:11px;color:var(--muted);line-height:1.55;margin-top:8px}
-  .weather-detail summary{cursor:pointer;padding:7px 0}
-  .weather-detail summary::after{content:"▼";font-size:11px}
-  .weather-detail[open] summary::after{content:"▲"}
+  .weather-detail{font-size:11px;color:var(--muted);line-height:1.55}
   .weather-detail pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;color:var(--text);margin:8px 0}
   .weather-detail a{color:#9cd8ff}
 
@@ -289,7 +286,7 @@
   <div class="card" id="weatherCard">
     <div class="chead weather-head"><span class="nm">기상예보</span><span class="weather-compass-hint">나침반 눌러 확대</span><span class="t" id="weatherUpdated" title="풍속 단위 m/s · 현재 바람·예보 중 마지막으로 받아온 시각">—</span></div>
     <div id="weatherForecast">예보 불러오는 중…</div>
-    <details class="weather-detail" id="weatherWarningDetails"><summary id="weatherWarningSummary">기상특보 상세</summary><div id="weatherWarningText">특보 확인 중…</div><a href="https://www.weather.go.kr/w/special-report/overall.do" target="_blank" rel="noopener noreferrer">기상청 특보 원문</a></details>
+    <details class="hist weather-detail" id="weatherWarningDetails"><summary id="weatherWarningSummary">기상특보 상세</summary><div id="weatherWarningText">특보 확인 중…</div><a id="weatherOfficialLink" href="https://www.weather.go.kr/w/special-report/overall.do" target="_blank" rel="noopener noreferrer" hidden>기상청 특보 원문</a></details>
   </div>
 
   <div class="card" id="damCard">
@@ -322,7 +319,7 @@
   <div id="cards"><!-- 교량 카드가 여기 삽입됨. 순서: 잠수교 → (여의도 물때) → 행주대교 → (인천 물때) -->
     <div class="card tidecard" id="yeouidoCard">
       <div class="chead"><span class="nm">여의도 물때</span><span class="t" id="yeouidoT">—</span></div>
-      <div class="tnote">인천 물때 약 4시간 뒤 추정 · 간조는 08~22시 · 단위 cm</div>
+      <div class="tnote">인천 물때 약 4시간 뒤 추정 · 단위 cm</div>
       <div class="trows" id="yeouidoRows"><div class="trow"><span class="tv">—</span></div></div>
     </div>
     <div class="card tidecard" id="incheonCard">
@@ -1572,7 +1569,7 @@ function renderWeather(){
     if(details.lastMarkup!==warningMarkup){details.innerHTML=warningMarkup;details.lastMarkup=warningMarkup;}
   }else{
     details.lastMarkup=null;
-    details.textContent=warn.error?'기상특보를 불러오지 못했습니다. 기상청 원문을 확인해 주세요.':'최신 기상특보 확인 중…';
+    details.textContent=warn.error?'기상특보를 불러오지 못했습니다. 기상청 날씨누리에서 확인해 주세요.':'최신 기상특보 확인 중…';
   }
 }
 function setupWeatherTimer(){
@@ -1697,7 +1694,8 @@ if($('toggleScene')) $('toggleScene').onclick=function(e){ e.preventDefault();
 function adminUnlocked(){ return store.get('hb_admin','')==='1'; }
 function applyAdmin(){ var on=adminUnlocked();
   var p=$('setPanel'); if(p) p.style.display=on?'':'none';
-  var d=$('flowDiag'); if(d) d.style.display=on?'':'none'; }   // 역류 진단줄도 관리자에게만
+  var d=$('flowDiag'); if(d) d.style.display=on?'':'none';
+  var w=$('weatherOfficialLink'); if(w) w.hidden=!on; }
 if(/[?&#]admin(\b|=|$)/i.test(location.href)) store.set('hb_admin','1');  // 비밀 URL로 열면 그 기기에 기억
 (function(){
   var h1=document.querySelector('h1'); if(!h1) return;

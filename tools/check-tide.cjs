@@ -5,6 +5,7 @@ const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+assert.match(html,/<div class="tnote">인천 물때 약 4시간 뒤 추정 · 단위 cm<\/div>/,'카드에서 간조 시간 안내만 생략');
 const source = html.slice(html.indexOf('function addMin('), html.indexOf('/* ----- 조류세기:'));
 assert(source.startsWith('function addMin('));
 const elements = {}, values = {}, phaseCalls = [];
